@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "tutor": "./agent/agent.ts:graph"
+  },
+  "env": ".env"
+}

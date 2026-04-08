@@ -1,0 +1,34 @@
+# Only needed so uv recognizes this as a project — not a publishable package
+[project]
+name = "lang-chat"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+
+dependencies = [
+    # Agent framework
+    "deepagents",
+    "langgraph>=1.0.0,<2.0",
+    "langchain>=1.0.0,<2.0",
+    "langchain-core>=1.0.0,<2.0",
+    "langsmith>=0.1.99",
+    "langchain-mcp-adapters",
+    "langgraph-sdk",
+
+    # Model providers — all installed, uncomment the one you want in agent/agent.py
+    "langchain-google-genai",   # Gemini (default — generous free tier)
+    "langchain-openai",         # OpenAI
+    "langchain-anthropic",      # Anthropic
+    "langchain-ollama",         # Ollama (local models)
+
+    # UI server
+    "fastapi",
+    "uvicorn[standard]",
+    "python-dotenv",
+
+    # LangGraph local dev
+    "langgraph-cli[inmem]>=0.4.0",
+]
+
+[tool.ruff]
+lint.select = ["E", "F", "I", "UP"]
+lint.ignore = ["T201", "E501", "UP006", "UP007"]

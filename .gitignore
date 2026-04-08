@@ -1,0 +1,35 @@
+# Environment
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+*.js.map
+
+# OS
+.DS_Store
+
+# Editor
+*.~
+*~
+
+# Local transcripts
+*.txt
+
+# LangGraph local state
+.langgraph_api/
+
+# Reference files (not permanent)
+langgraph_architecture.html
+langgraph_deployment_architecture.md
+langgraph_interactive.html
