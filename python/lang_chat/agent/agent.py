@@ -14,6 +14,7 @@ Assistant context (set per assistant in LangSmith):
 - student_name:    student's first name, used to personalize responses
 """
 
+import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import ModelRequest, dynamic_prompt
 from langchain.chat_models import init_chat_model
 from langchain.tools import ToolRuntime, tool
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from agent.system_prompt import BASE_SYSTEM_PROMPT
 
@@ -90,11 +92,23 @@ def read_lesson_material(runtime: ToolRuntime[ContextSchema]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# MCP tools — LangChain/LangGraph/LangSmith docs search
+# ---------------------------------------------------------------------------
+_mcp_client = MultiServerMCPClient({
+    "docs": {
+        "url": "https://docs.langchain.com/mcp",
+        "transport": "http",
+    }
+})
+mcp_tools = asyncio.run(_mcp_client.get_tools())
+
+
+# ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------
 graph = create_agent(
     model=model,
-    tools=[read_lesson_material],
+    tools=[read_lesson_material, *mcp_tools],
     middleware=[lesson_prompt],
     context_schema=ContextSchema,
 )

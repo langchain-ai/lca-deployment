@@ -1,26 +1,30 @@
 /**
  * LangChat Tutor Agent — TypeScript
  *
- * This file defines the tutor agent using Deep Agents.
+ * This file defines the tutor agent using LangChain's createAgent.
  * It is the main entry point for LangGraph Cloud deployment.
  *
  * The agent uses:
  * - Gemini (default) via initChatModel — swap to any supported provider by uncommenting below
- * - readLessonMaterial tool — reads lesson content from the tutor_l1/ directory
+ * - readLessonMaterial tool — reads lesson content from the tutor_lx/ directory
  * - LangChain MCP docs server — for documentation lookups beyond the lesson material
+ *
+ * Assistant context (set per assistant in LangSmith):
+ * - lessonId:       which lesson to load instructions and material for (e.g. "tutor_l1")
+ * - storeNamespace: student namespace (first_last), used to look up store data
+ * - studentName:    student's first name, used to personalize responses
  */
 
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
+import * as z from "zod";
 
-import { createDeepAgent } from "deepagents";
+import { createAgent, dynamicSystemPromptMiddleware, tool, type ToolRuntime } from "langchain";
 import { initChatModel } from "langchain/chat_models/universal";
-import { tool } from "@langchain/core/tools";
-import { z } from "zod";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 
-import { SYSTEM_PROMPT } from "./systemPrompt.js";
+import { SYSTEM_PROMPT as BASE_SYSTEM_PROMPT } from "./systemPrompt.js";
 
 // ---------------------------------------------------------------------------
 // Model — uncomment the provider you want to use
@@ -31,37 +35,77 @@ const model = await initChatModel("google_genai:gemini-2.5-flash");    // Gemini
 // const model = await initChatModel("anthropic:claude-sonnet-4-6");   // Anthropic
 // const model = await initChatModel("ollama:llama3.2");               // Ollama (local)
 
+const LESSONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+
+// ---------------------------------------------------------------------------
+// Context schema — injected by LangGraph Cloud from assistant context dict
+// ---------------------------------------------------------------------------
+const contextSchema = z.object({
+  lessonId: z.string().default("tutor_l1"),
+  studentName: z.string().default("Student"),
+  storeNamespace: z.string().default(""),
+});
+
+type Context = z.infer<typeof contextSchema>;
+
+
+function loadLessonInstructions(lessonId: string): string {
+  const instructionsFile = path.join(LESSONS_DIR, lessonId, `${lessonId}_instructions.md`);
+  if (!fs.existsSync(instructionsFile)) {
+    return `(No instructions file found for lesson '${lessonId}')`;
+  }
+  return fs.readFileSync(instructionsFile, "utf-8");
+}
+
+
+// ---------------------------------------------------------------------------
+// Dynamic system prompt — reads lessonId and studentName from assistant context
+// ---------------------------------------------------------------------------
+const lessonPrompt = dynamicSystemPromptMiddleware<Context>((state, runtime) => {
+  const lessonId = runtime.context.lessonId;
+  const studentName = runtime.context.studentName;
+  const instructions = loadLessonInstructions(lessonId);
+  return (
+    `${BASE_SYSTEM_PROMPT}\n\n` +
+    `## Current session\n` +
+    `Student: ${studentName}\n` +
+    `Lesson: ${lessonId}\n\n` +
+    `## Lesson instructions\n\n` +
+    instructions
+  );
+});
+
+
 // ---------------------------------------------------------------------------
 // Lesson material tool
-// Reads tutor_l1_information.md from the tutor_l1/ directory next to agent/
+// Reads the information file for the current lesson from assistant context
 // ---------------------------------------------------------------------------
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LESSON_DIR = path.join(__dirname, "..", "tutor_l1");
-
 const readLessonMaterial = tool(
-  async () => {
-    const infoFile = path.join(LESSON_DIR, "tutor_l1_information.md");
+  async (_: object, runtime: ToolRuntime<Context>) => {
+    const lessonId = runtime.context.lessonId;
+    const infoFile = path.join(LESSONS_DIR, lessonId, `${lessonId}_information.md`);
     if (!fs.existsSync(infoFile)) {
-      return "Lesson material not found.";
+      return `Lesson material not found for '${lessonId}'.`;
     }
     return fs.readFileSync(infoFile, "utf-8");
   },
   {
     name: "read_lesson_material",
     description:
-      "Read the lesson material for the current lesson. " +
+      "Read the reference material for the current lesson. " +
       "Use this tool when you need to answer a student's question or quiz them. " +
-      "Always check the lesson material before falling back to the MCP docs server.",
+      "Always check the lesson material before answering.",
     schema: z.object({}),
   }
 );
 
+
 // ---------------------------------------------------------------------------
-// MCP tools — LangChain documentation server
-// Loaded once at startup; used as fallback when lesson material isn't enough
+// MCP tools — LangChain/LangGraph/LangSmith docs search
 // ---------------------------------------------------------------------------
 const mcpClient = new MultiServerMCPClient({
-  "langchain-docs": {
+  "docs": {
     url: "https://docs.langchain.com/mcp",
     transport: "streamable_http",
   },
@@ -69,11 +113,13 @@ const mcpClient = new MultiServerMCPClient({
 
 const mcpTools = await mcpClient.getTools();
 
+
 // ---------------------------------------------------------------------------
 // Agent
 // ---------------------------------------------------------------------------
-export const graph = await createDeepAgent({
+export const graph = createAgent({
   model,
   tools: [readLessonMaterial, ...mcpTools],
-  systemPrompt: SYSTEM_PROMPT,
+  middleware: [lessonPrompt],
+  contextSchema,
 });
