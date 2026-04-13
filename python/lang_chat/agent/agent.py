@@ -24,7 +24,9 @@ from langchain.chat_models import init_chat_model
 from langchain.tools import ToolRuntime, tool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-from agent.system_prompt import BASE_SYSTEM_PROMPT
+import sys
+sys.path.insert(0, str(Path(__file__).parent))
+from system_prompt import BASE_SYSTEM_PROMPT
 
 # ---------------------------------------------------------------------------
 # Model — uncomment the provider you want to use

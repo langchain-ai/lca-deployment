@@ -29,7 +29,7 @@ load_dotenv()
 # Lessons available in this course
 LESSONS = [
     {"id": "tutor_l1", "label": "deployment architecture", "active": True},
-    {"id": "tutor_l2", "label": "lesson 2", "active": False},
+    {"id": "tutor_l2", "label": "connecting to a deployment", "active": True},
     {"id": "tutor_l3", "label": "lesson 3", "active": False},
     {"id": "tutor_l4", "label": "lesson 4", "active": False},
     {"id": "tutor_l5", "label": "lesson 5", "active": False},

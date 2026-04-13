@@ -23,7 +23,7 @@ import "dotenv/config";
 // Lessons available in this course
 export const LESSONS = [
   { id: "tutor_l1", label: "deployment architecture", active: true },
-  { id: "tutor_l2", label: "lesson 2", active: false },
+  { id: "tutor_l2", label: "connecting to a deployment", active: true },
   { id: "tutor_l3", label: "lesson 3", active: false },
   { id: "tutor_l4", label: "lesson 4", active: false },
   { id: "tutor_l5", label: "lesson 5", active: false },

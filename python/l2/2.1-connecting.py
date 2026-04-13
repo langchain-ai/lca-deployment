@@ -14,8 +14,9 @@ Steps:
   2. List available graphs (to find the graph_id)
   3. Create an assistant pointing to your graph
   4. Update the assistant with a system prompt (context)
-  5. Run a thread using the assistant
-  6. Delete the assistant when done
+  5. Run a thread using assistant_l1 (non-streaming)
+  5b. Create assistant_l2 and run it streaming — same question, different context
+  6. Delete both assistants when done
 
 Once you have created a client and set up an assistant:
 - Context (system prompt, model config) is stored server-side on the assistant.
@@ -71,12 +72,12 @@ async def main():
     # Use this step if you want a named assistant with custom configuration.
     # ---------------------------------------------------------------------------
 
-    assistant = await client.assistants.create(
+    assistant_l1 = await client.assistants.create(
         graph_id="tutor",
         name="Tutor — Lesson 1",
         context={},
     )
-    print(f"\nCreated assistant: {assistant['assistant_id']}  name={assistant['name']}")
+    print(f"\nCreated assistant: {assistant_l1['assistant_id']}  name={assistant_l1['name']}")
 
     # ---------------------------------------------------------------------------
     # Step 4: Update the assistant with a system prompt
@@ -85,14 +86,14 @@ async def main():
     # NOTE: When updating, include ALL context fields — not just the ones changing.
     # ---------------------------------------------------------------------------
 
-    assistant = await client.assistants.update(
-        assistant["assistant_id"],
+    assistant_l1 = await client.assistants.update(
+        assistant_l1["assistant_id"],
         context={
             "lesson_id": "tutor_l1",
             "student_name": "Student",
         },
     )
-    print(f"Updated assistant: {assistant['assistant_id']}")
+    print(f"Updated assistant: {assistant_l1['assistant_id']}")
 
     # ---------------------------------------------------------------------------
     # Step 5: Run a thread using the assistant
@@ -101,31 +102,79 @@ async def main():
     thread = await client.threads.create()
     print(f"\nThread: {thread['thread_id']}")
 
-    printed = 0  # track how much of the cumulative content we've already printed
-    async for event in client.runs.stream(
+    result = await client.runs.wait(
         thread["thread_id"],
-        assistant["assistant_id"],
-        input={"messages": [{"role": "user", "content": "What is the Agent Server?"}]},
+        assistant_l1["assistant_id"],
+        input={"messages": [{"role": "user", "content": "What lesson number is this?"}]},
+    )
+    messages = result.get("messages", [])
+    if messages:
+        content = messages[-1].get("content", "")
+        if isinstance(content, list):
+            content = "".join(
+                b.get("text", "") for b in content
+                if isinstance(b, dict) and b.get("type") == "text"
+            )
+        print(content)
+
+    # ---------------------------------------------------------------------------
+    # Step 5b: Create a second assistant with lesson 2 context — streaming output
+    #
+    # Same graph, same question — different context means a different lesson.
+    # This time we stream the response to show how streaming works.
+    # ---------------------------------------------------------------------------
+
+    assistant_l2 = await client.assistants.create(
+        graph_id="tutor",
+        name="Tutor — Lesson 2",
+        context={
+            "lesson_id": "tutor_l2",
+            "student_name": "Student",
+        },
+    )
+    print(f"\nCreated assistant: {assistant_l2['assistant_id']}  name={assistant_l2['name']}")
+
+    thread_l2 = await client.threads.create()
+    print(f"Thread: {thread_l2['thread_id']}\n")
+
+    printed: dict[str, int] = {}
+    async for event in client.runs.stream(
+        thread_l2["thread_id"],
+        assistant_l2["assistant_id"],
+        input={"messages": [{"role": "user", "content": "What lesson number is this?"}]},
         stream_mode="messages",
     ):
-        if isinstance(event.data, list):
-            for item in event.data:
-                msg = item[0] if isinstance(item, (list, tuple)) else item
-                if isinstance(msg, dict) and msg.get("type") in ("AIMessageChunk", "AIMessage", "ai"):
-                    content = msg.get("content", "")
-                    if isinstance(content, str) and len(content) > printed:
-                        print(content[printed:], end="", flush=True)
-                        printed = len(content)
+        if not isinstance(event.data, list):
+            continue
+        for item in event.data:
+            msg = item[0] if isinstance(item, (list, tuple)) else item
+            if not isinstance(msg, dict):
+                continue
+            if msg.get("type") in ("AIMessageChunk", "AIMessage", "ai"):
+                msg_id = msg.get("id", "")
+                content = msg.get("content", "")
+                if isinstance(content, list):
+                    content = "".join(
+                        b.get("text", "") for b in content
+                        if isinstance(b, dict) and b.get("type") == "text"
+                    )
+                if isinstance(content, str):
+                    already = printed.get(msg_id, 0)
+                    if len(content) > already:
+                        print(content[already:], end="", flush=True)
+                        printed[msg_id] = len(content)
     print()
 
     # ---------------------------------------------------------------------------
-    # Step 6: Delete the assistant
+    # Step 6: Delete both assistants
     #
-    # Frees the configuration record. Does not affect compute resources.
+    # Frees the configuration records. Does not affect compute resources.
     # ---------------------------------------------------------------------------
 
-    await client.assistants.delete(assistant["assistant_id"])
-    print(f"\nDeleted assistant: {assistant['assistant_id']}")
+    await client.assistants.delete(assistant_l1["assistant_id"])
+    print(f"\nDeleted assistant_l1: {assistant_l1['assistant_id']}")
+    await client.assistants.delete(assistant_l2["assistant_id"])
+    print(f"Deleted assistant_l2: {assistant_l2['assistant_id']}")
 
 
 if __name__ == "__main__":
