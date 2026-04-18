@@ -210,7 +210,7 @@ profile = item["value"] if item else None
 The tutor UI doesn't call the LangGraph SDK directly from the browser. Instead, it uses a server proxy:
 
 ```
-Browser (index.html)  →  Local Server (server.py)  →  LangGraph SDK  →  LangGraph Deployment
+Browser (index.html)  →  Agent Server (app.py)  →  LangGraph SDK  →  LangSmith Deployment
 ```
 
 The browser sends requests to the local server, which holds the `LANGSMITH_API_KEY` and makes authenticated SDK calls. This keeps the API key off the client entirely.

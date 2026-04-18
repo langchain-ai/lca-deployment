@@ -331,11 +331,7 @@
 <div id="tab-config" class="tab-content active">
   <div class="student-panel">
     <h2>configuration</h2>
-    <div class="student-field">
-      <label>deployment url</label>
-      <input type="text" id="deploymentUrl" placeholder="https://your-deployment.smith.langchain.com (or http://127.0.0.1:2024 for local)" value="http://127.0.0.1:2024">
-    </div>
-    <h2 style="margin-top:20px">student profile</h2>
+    <h2>student profile</h2>
     <div class="name-row">
       <div class="student-field">
         <label>first name</label>
@@ -488,7 +484,6 @@
     const lastName = document.getElementById('lastName').value.trim() || 'Doe';
     const goals = document.getElementById('goals').value.trim();
     const preferences = document.getElementById('preferences').value.trim();
-    const deploymentUrl = document.getElementById('deploymentUrl').value.trim().replace(/\/$/, '');
     const statusEl = document.getElementById('studentStatus');
 
     document.getElementById('startBtn').disabled = true;
@@ -499,7 +494,7 @@
       const res = await fetch('/student/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deployment_url: deploymentUrl, first_name: firstName, last_name: lastName, goals, preferences }),
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, goals, preferences }),
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -528,7 +523,6 @@
   async function studentUpdate() {
     const goals = document.getElementById('goals').value.trim();
     const preferences = document.getElementById('preferences').value.trim();
-    const deploymentUrl = document.getElementById('deploymentUrl').value.trim().replace(/\/$/, '');
     const statusEl = document.getElementById('studentStatus');
 
     statusEl.textContent = 'updating...';
@@ -538,7 +532,7 @@
       const res = await fetch('/student/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deployment_url: deploymentUrl, namespace: state.namespace, goals, preferences }),
+        body: JSON.stringify({ namespace: state.namespace, goals, preferences }),
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -587,8 +581,6 @@
     const session = state.sessions.find(s => s.lesson_id === lessonId);
     if (!session) return;
 
-    const deploymentUrl = document.getElementById('deploymentUrl').value.trim().replace(/\/$/, '');
-
     input.value = '';
     lessonState[lessonId].isStreaming = true;
 
@@ -609,7 +601,6 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
-          deployment_url: deploymentUrl,
           assistant_id: session.assistant_id,
           thread_id: session.thread_id,
         }),

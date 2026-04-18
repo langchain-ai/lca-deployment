@@ -3,5 +3,8 @@
   "graphs": {
     "tutor": "./agent/agent.ts:graph"
   },
-  "env": ".env"
+  "http": {
+    "app": "./ui/app.ts:app"
+  },
+  "env": "../../../.env"
 }

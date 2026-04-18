@@ -68,9 +68,9 @@ export async function* streamResponse(
    *
    * Yields text chunks from the agent's response.
    *
-   * Gemini 2.5 Flash uses extended thinking: content is a list with two blocks —
-   * block[0] is the thinking block (dict with extras.signature — skip it),
-   * block[1] is the actual response (plain string — include it).
+   * Some LLMs (e.g. Gemini) return content as a list of typed blocks.
+   * We include plain strings and type="text" blocks; skip anything else
+   * (e.g. type="thinking" blocks from extended thinking models).
    */
   const printed: Record<string, number> = {}; // track cumulative content per message ID
 
@@ -91,15 +91,15 @@ export async function* streamResponse(
       let content = m.content;
 
       if (Array.isArray(content)) {
-        // Normalize list content blocks — skip Gemini thinking blocks
+        // Normalize list content blocks — include strings and type="text" blocks,
+        // skip others (e.g. type="thinking" from extended thinking models).
         const parts: string[] = [];
         for (const block of content as Array<unknown>) {
           if (typeof block === "string") {
             parts.push(block);
           } else if (block && typeof block === "object") {
             const b = block as Record<string, unknown>;
-            const extras = b.extras as Record<string, unknown> | undefined;
-            if (b.type === "text" && !extras?.signature) {
+            if (b.type === "text") {
               parts.push((b.text as string) ?? "");
             }
           }

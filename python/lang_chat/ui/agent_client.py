@@ -102,15 +102,15 @@ async def stream_response(
                 content = msg.get("content", "")
                 if isinstance(content, list):
                     # Normalize list content blocks to a single string.
-                    # Gemini 2.5 Flash uses extended thinking: thinking blocks are
-                    # dicts with extras.signature; the actual response is a plain string.
+                    # Some LLMs (e.g. Gemini) return content as a list of typed blocks.
+                    # Include plain strings and type="text" blocks; skip anything else
+                    # (e.g. type="thinking" blocks from extended thinking models).
                     parts = []
                     for block in content:
                         if isinstance(block, str):
                             parts.append(block)
                         elif isinstance(block, dict):
-                            # Skip thinking blocks (have extras.signature)
-                            if block.get("type") == "text" and not block.get("extras", {}).get("signature"):
+                            if block.get("type") == "text":
                                 parts.append(block.get("text", ""))
                     content = "".join(parts)
                 if isinstance(content, str):
