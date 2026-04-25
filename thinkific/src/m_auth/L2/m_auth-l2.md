@@ -196,9 +196,20 @@ The `[user1]` prefix in the response is `identity` read directly from the config
 
 ---
 
+## Homework
+
+Here is an optional homework assignment to try out. With or without the assistance of a coding agent, you should copy the existing lab and add two enhancements:
+
+1. A key take-away from this lesson is that the contents of the dictionary returned by the routine with the `@auth.authenticate` decorator is determined by you — other than the required `identity` field. So, add a `name` and a `role` of `"student"` to the structure.
+2. The contents of the returned value are available in a graph as shown in `graph.py`. Update that graph to print the contents of the structure.
+
+Do your work in the `./hw` directory. A working example is in the `./hw_answers` directory.
+
+---
+
 ## What you learned in this lesson
 
-- **`VALID_TOKENS`** — a hardcoded dict used as a stand-in for a real user database. It makes the lookup mechanic visible before adding JWT complexity.
+- How to replace the default authentication with your own custom authentication.
 - **`@auth.authenticate`** — validates the `Authorization` header, extracts the bearer token, and returns a `MinimalUserDict`. An invalid or missing token raises a 401 and the agent never executes.
 - **Registering the handler** — add an `auth.path` key to `langgraph.json` pointing to `file:Auth_instance`. The function name does not matter, only the decorator.
 - **Studio access** — Studio remains open by default even with custom auth. Use `disable_studio_auth: true` to close it.
