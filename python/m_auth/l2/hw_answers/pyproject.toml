@@ -9,6 +9,3 @@ dependencies = [
     "langgraph-sdk",
     "langgraph-cli[inmem]>=0.4.0",
 ]
-
-[tool.setuptools.packages.find]
-include = ["agent*"]

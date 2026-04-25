@@ -1,13 +1,17 @@
 # Authentication and Authorization: Lesson 3 — Private Conversations
 
-In Lesson 2 you added `@auth.authenticate`, which confirms who each user is. But authentication alone does not restrict what users can see — Alice and Bob can still read each other's threads. In this lesson you will add authorization: `@auth.on` handlers that stamp each resource with its owner on creation and filter by that owner on every read.
+In the previous lesson you added `@auth.authenticate`, which confirms who each user is. But authentication alone does not restrict what users can see — Alice and Bob can still read each other's threads. In this lesson you will add authorization: `@auth.on` handlers that stamp each resource with its owner on creation and filter by that owner on every read.
 
 By the end of this lesson, each user will have completely private conversations — threads created by Alice are invisible to Bob, and vice versa.
 
 <style>@import url('../../shared/sd-components.css');</style>
 <script src="../../shared/sd-components.js"></script>
 
+**Creating a thread — ownership is stamped at write time**
+
 <div class="sd-wrap" id="sd-authz-create"></div>
+
+**Reading a thread — the filter makes Alice's thread invisible to Bob**
 
 <div class="sd-wrap" id="sd-authz-read"></div>
 
@@ -15,69 +19,106 @@ By the end of this lesson, each user will have completely private conversations 
 
 ## How @auth.on works
 
-An `@auth.on` handler runs after `@auth.authenticate` succeeds and receives two arguments:
+Every API operation that touches a resource — `threads.create()`, `threads.get()`, `threads.search()`, `runs.create()`, and so on — passes through `@auth.on`. It fires after `@auth.authenticate` confirms who the user is, and before the resource database read or write happens:
 
-- **`ctx`** (`AuthContext`) — the verified user, their permissions, the resource name (`"threads"`, `"runs"`, etc.), and the action (`"create"`, `"read"`, `"update"`, `"delete"`, `"search"`, `"create_run"`).
-- **`value`** (`dict`) — the data being created or accessed. Its exact shape depends on the resource and action.
+1. Request arrives
+2. `@auth.authenticate` — who is this?
+3. `@auth.on` — what can they do with this resource?
+4. Resource database operation executes (with stamped metadata on writes, or a filter applied on reads)
 
-The handler does two jobs:
-1. **On writes**: adds metadata to the resource before it is stored, so ownership is persisted in the database.
-2. **Returns a filter dict**: LangGraph applies this as a key-value query against the `metadata` column so users only see matching records.
+The handler receives two arguments:
+
+- **`ctx`** (`AuthContext`) — three attributes:
+    - `ctx.user` — an object built from the dict you returned in `@auth.authenticate`. Each key becomes an attribute: `ctx.user.identity` is always present; `ctx.user.name` or `ctx.user.role` are available if you included them.
+    - `ctx.resource` — string identifying the resource type: `"threads"`, `"runs"`, `"assistants"`, etc.
+    - `ctx.action` — string identifying the operation: `"create"`, `"read"`, `"update"`, `"delete"`, `"search"`, or `"create_run"`. See [Supported actions and types](https://docs.langchain.com/langsmith/auth#supported-actions-and-types) for the full list of valid resource/action combinations.
+- **`value`** (`dict`) — the live request payload for the operation. Its shape depends entirely on the resource and action. Full type definitions: [Python `types.py`](https://github.com/langchain-ai/langgraph/blob/main/libs/sdk-py/langgraph_sdk/auth/types.py) · [TypeScript `types.ts`](https://github.com/langchain-ai/langgraphjs/blob/main/libs/sdk/src/auth/types.ts).
+
+For example, on `threads.create`, `value` looks like:
+
+```python
+{
+    "thread_id": UUID("99b045bc-..."),
+    "metadata": {},
+    "if_exists": "raise"
+}
+```
+
+You can read any field to make authorization decisions. The one documented mutation point is `value["metadata"]` — anything you write there is persisted with the resource on write operations.
+
+The handler always returns a filter dict, but its effect differs by operation:
+1. **On writes**: mutating `value["metadata"]` is what does the work — ownership is stamped on the resource before it is stored. The returned filter scopes what is accessible after the write.
+2. **On reads**: the returned filter is what does the work — LangGraph applies it as a key-value query against the `metadata` column so users only see matching records. Mutating `value["metadata"]` is a no-op since nothing is stored.
 
 ---
 
-## Step 1: Add an @auth.on handler
+## Project structure
 
-Open `agent/auth.py` and add the following handler below `@auth.authenticate`. Nothing else in the file changes:
+There are three lab directories for this lesson:
+
+```
+python/m_auth/
+├── l3a/                    ← Lab 1: broad handler, Alice and Bob
+│   ├── agent/
+│   │   ├── __init__.py
+│   │   └── graph.py        ← same echo agent as the previous lesson
+│   ├── auth.py
+│   ├── client.py
+│   ├── .env
+│   ├── .env.example
+│   ├── langgraph.json
+│   └── pyproject.toml
+├── l3b/                    ← Lab 2: scoped handlers, Alice, Bob, and admin
+└── l3c/                    ← Lab 3: store authorization
+```
+
+---
+
+## Lab 3a: Private conversations
+
+`auth.py` in `python/m_auth/l3a/` — add the following handler below `@auth.authenticate`:
 
 ```python
 @auth.on
 async def add_owner(ctx: Auth.types.AuthContext, value: dict):
-    """Stamp owner on creation; filter by owner on every read."""
     filters = {"owner": ctx.user.identity}
     metadata = value.setdefault("metadata", {})
-    metadata.update(filters)
+    metadata.update(filters)  # updates value["metadata"]
     return filters
 ```
 
-A single broad `@auth.on` handler applies to **every resource type and every action**. It:
-- Adds `"owner": <identity>` to the resource's `metadata` dict (written to the database with the record).
-- Returns `{"owner": <identity>}` as a filter, so every read is automatically scoped to resources owned by the current user.
+A single broad `@auth.on` applies to every resource and action. It stamps `"owner": <identity>` into `metadata` on writes and returns the same dict as a filter so reads are automatically scoped to the current user.
 
----
+Start the server:
 
-## Step 2: Test private conversations
+```bash
+cd python/m_auth/l3a
+uv run langgraph dev --no-browser
+```
 
-Restart the server and run the following code:
+<Tip>
+**Starting fresh**
 
-```python
-from langgraph_sdk import get_client
+The server stores state in a `.langgraph_api` directory. If you run the client multiple times, thread counts will accumulate. To reset:
 
-alice = get_client(
-    url="http://localhost:2024",
-    headers={"Authorization": "Bearer alice-token"}
-)
-bob = get_client(
-    url="http://localhost:2024",
-    headers={"Authorization": "Bearer bob-token"}
-)
+```bash
+rm -rf .langgraph_api && uv run langgraph dev --no-browser
+```
+</Tip>
 
-# Alice creates a thread
-alice_thread = await alice.threads.create()
-print(f"Alice created: {alice_thread['thread_id']}")
+Run the client in a second terminal:
 
-# Bob tries to access Alice's thread — should be blocked
-try:
-    await bob.threads.get(alice_thread["thread_id"])
-    print("Bob should not see this!")
-except Exception as e:
-    print("Bob correctly denied:", e)
+```bash
+uv run python client.py
+```
 
-# Each user lists only their own threads
-alice_threads = await alice.threads.search()
-bob_threads = await bob.threads.search()
-print(f"Alice sees {len(alice_threads)} thread(s)")   # 1
-print(f"Bob sees {len(bob_threads)} thread(s)")       # 0
+Expected output:
+
+```
+✅ Alice created thread: 019dc647-e8b8-7751-8689-4f2faae4347b
+✅ Bob correctly blocked: 404 — Thread with ID 019dc647-... not found
+✅ Alice sees 1 thread(s)
+✅ Bob sees 0 thread(s)
 ```
 
 <Tip>
@@ -88,63 +129,132 @@ When the filter `{owner: "user2"}` is applied to the query, Alice's thread simpl
 
 ---
 
-## Scoped handlers
+## Lab 3b: Admin access with scoped handlers
 
-A single `@auth.on` handler is concise, but it applies the same logic to every resource and action. If you need different rules for different situations — or want a typed `value` dict — use scoped handlers:
+The broad `@auth.on` handles Alice and Bob, but it has one limitation: it always returns the same filter regardless of who is asking. An admin who needs to see all threads cannot be accommodated — the handler has no way to return `{}` for admin and `{"owner": identity}` for everyone else, because it runs identically for every action.
+
+Scoped handlers fix this. Each targets a specific resource + action, so you can vary the filter by user.
+
+`auth.py` in `python/m_auth/l3b/` uses three scoped handlers and adds `"admin-token"` to `VALID_TOKENS`:
 
 ```python
+VALID_TOKENS = {
+    "alice-token": {"id": "user1", "name": "Alice"},
+    "bob-token":   {"id": "user2", "name": "Bob"},
+    "admin-token": {"id": "admin", "name": "Admin"},
+}
+
 @auth.on.threads.create
-async def on_thread_create(ctx: Auth.types.AuthContext, value: Auth.types.on.threads.create.value):
-    """Stamp owner when a thread is created."""
+async def on_thread_create(
+    ctx: Auth.types.AuthContext,
+    value: Auth.types.on.threads.create.value,
+):
     metadata = value.setdefault("metadata", {})
-    metadata["owner"] = ctx.user.identity
+    metadata["owner"] = ctx.user.identity  # updates value["metadata"]["owner"]
     return {"owner": ctx.user.identity}
 
 @auth.on.threads.read
-async def on_thread_read(ctx: Auth.types.AuthContext, value: Auth.types.on.threads.read.value):
-    """Filter threads to this user on reads."""
+async def on_thread_read(
+    ctx: Auth.types.AuthContext,
+    value: Auth.types.on.threads.read.value,
+):
+    if ctx.user.identity == "admin":
+        return {}
+    return {"owner": ctx.user.identity}
+
+@auth.on.threads.search
+async def on_thread_search(
+    ctx: Auth.types.AuthContext,
+    value: Auth.types.on.threads.search.value,
+):
+    if ctx.user.identity == "admin":
+        return {}
     return {"owner": ctx.user.identity}
 ```
 
-The most specific handler wins. If both `@auth.on` and `@auth.on.threads.create` are defined, the scoped handler runs for thread creation and the broad handler covers everything else.
+`on_thread_create` stamps ownership as before, but with typed `value` — your IDE knows the field names.
 
-You can also block entire resource types outright:
+`on_thread_read` and `on_thread_search` return `{}` for admin (no filter = sees everything) and the owner filter for everyone else.
 
-```python
-@auth.on.assistants
-async def on_assistants(ctx, value):
-    raise Auth.exceptions.HTTPException(status_code=403, detail="Not permitted")
+<Tip>
+**The most specific handler wins**
+
+If both `@auth.on` and `@auth.on.threads.create` are defined, the scoped handler runs for thread creation and the broad handler covers everything else. You can mix broad and scoped handlers in the same `auth.py`.
+</Tip>
+
+Start the server:
+
+```bash
+cd python/m_auth/l3b
+uv run langgraph dev --no-browser
+```
+
+Run the client:
+
+```bash
+uv run python client.py
+```
+
+Expected output:
+
+```
+✅ Alice created thread: 019dc647-...
+✅ Bob created thread: 019dc648-...
+✅ Bob correctly blocked: 404 — Thread with ID 019dc647-... not found
+✅ Alice sees 1 thread(s)
+✅ Bob sees 1 thread(s)
+✅ Admin sees 2 thread(s)
 ```
 
 ---
 
-## The full auth.py at this point
+## Lab 3c: Store authorization
+
+The store is a key-value store built into LangGraph. Items are addressed by a `namespace` tuple you control. Unlike threads, LangGraph does not automatically apply a returned filter dict to store queries — there is no built-in scoping mechanism. The handler receives the full request context and can allow or block access however it chooses. In this example it checks the namespace and raises if the caller does not own it.
+
+`auth.py` in `python/m_auth/l3c/`:
 
 ```python
-from langgraph_sdk import Auth
+@auth.on.store()
+async def on_store(ctx: Auth.types.AuthContext, value: dict):
+    if ctx.user.identity == "admin":
+        return
+    namespace: tuple = value["namespace"]
+    assert namespace[0] == ctx.user.identity, "Not authorized"
+```
 
-VALID_TOKENS = {
-    "alice-token": {"id": "user1", "name": "Alice"},
-    "bob-token":   {"id": "user2", "name": "Bob"},
-}
+The handler returns nothing — `return` (or `return None`) means allow, `assert` raises an `AssertionError` to block. Admin bypasses the check entirely and can access any namespace.
 
-auth = Auth()
+The convention is to put the caller's identity as the first element of the namespace: `["user1", "notes"]` for Alice, `["user2", "notes"]` for Bob. The handler checks only that first element.
 
-@auth.authenticate
-async def get_current_user(authorization: str | None) -> Auth.types.MinimalUserDict:
-    if not authorization:
-        raise Auth.exceptions.HTTPException(status_code=401, detail="Missing token")
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or token not in VALID_TOKENS:
-        raise Auth.exceptions.HTTPException(status_code=401, detail="Invalid token")
-    return {"identity": VALID_TOKENS[token]["id"]}
+<Tip>
+**Store uses assert, not a filter dict**
 
-@auth.on
-async def add_owner(ctx: Auth.types.AuthContext, value: dict):
-    filters = {"owner": ctx.user.identity}
-    metadata = value.setdefault("metadata", {})
-    metadata.update(filters)
-    return filters
+For threads and runs, LangGraph automatically applies the returned filter dict as a query constraint. For the store, no such mechanism exists — the namespace tuple is the natural access boundary. The handler's job is to allow or block access directly, not to scope a query.
+</Tip>
+
+Start the server:
+
+```bash
+cd python/m_auth/l3c
+uv run langgraph dev --no-browser
+```
+
+Run the client:
+
+```bash
+uv run python client.py
+```
+
+Expected output:
+
+```
+✅ Alice stored a note
+✅ Bob correctly blocked: ...
+✅ Alice reads her note: Alice's private note
+✅ Bob stored a note
+✅ Admin reads Alice's note: Alice's private note
+✅ Admin reads Bob's note: Bob's private note
 ```
 
 ---
@@ -154,7 +264,6 @@ async def add_owner(ctx: Auth.types.AuthContext, value: dict):
 - **`@auth.on`** — runs after authentication on every resource access. Stamps `metadata` on writes and returns a filter dict on reads. A single broad handler covers all resources and actions.
 - **`ctx.user.identity`** — the unique identifier returned by `@auth.authenticate`. This is the anchor that ties resources to their owner.
 - **Filter application** — the returned dict is applied as a generic key-value query against the `metadata` column. Users only see records where the filter matches.
-- **404 vs 403** — filtered-out resources return 404 to avoid confirming that the resource exists.
 - **Scoped handlers** — `@auth.on.threads.create` and `@auth.on.threads.read` give per-action control and typed `value` dicts. The most specific handler wins.
 
 ---
@@ -171,7 +280,7 @@ In the next lesson you will replace the hardcoded `VALID_TOKENS` dict with real 
     question="What two things does an @auth.on handler do?"
     choices='["Validates the token and returns the user", "Stamps metadata on the resource and returns a filter dict", "Raises a 401 and logs the request", "Reads the database and returns all resources"]'
     correctIndex={1}
-    explanation="@auth.on stamps metadata onto resources being written so ownership persists in the database, and returns a filter dict that LangGraph applies to scope subsequent reads to the current user."
+    explanation="@auth.on stamps metadata onto resources being written so ownership persists in the resource database, and returns a filter dict that LangGraph applies to scope subsequent reads to the current user."
 />
 
 <MCQ
@@ -185,7 +294,7 @@ In the next lesson you will replace the hardcoded `VALID_TOKENS` dict with real 
     question="What does ctx.user.identity contain inside an @auth.on handler?"
     choices='["The raw bearer token", "The unique identifier returned by @auth.authenticate", "The user email address", "The LangSmith API key"]'
     correctIndex={1}
-    explanation="ctx.user.identity is the identity field from the dict returned by @auth.authenticate. It is guaranteed to be present because identity is the one required field in MinimalUserDict."
+    explanation="ctx.user.identity is the identity field from the dict returned by @auth.authenticate. It is guaranteed to be present because identity is the one required field in Auth.types.MinimalUserDict."
 />
 
 <MCQ
@@ -212,7 +321,7 @@ In the next lesson you will replace the hardcoded `VALID_TOKENS` dict with real 
 <script>
 buildDiagram({
     id: 'sd-authz-create',
-    participants: ['Alice', 'Agent Server', 'Database'],
+    participants: ['Alice', 'Agent Server', 'Resource Database'],
     cx: [130, 500, 870],
     bw: 140, bh: 40, tby: 10, bby: 350, vw: 1000, vh: 400,
     buildSteps: function(a) {
@@ -227,15 +336,15 @@ buildDiagram({
     steps: [
       { tag: 'Step 1 of 5', caption: 'Alice sends a request to create a thread with her bearer token.' },
       { tag: 'Step 2 of 5', caption: '@auth.authenticate fires first and confirms Alice is user1. Then @auth.on fires and stamps the thread metadata with owner: "user1" before the thread is written.' },
-      { tag: 'Step 3 of 5', caption: 'The Agent Server writes the thread to the database, including the metadata that records Alice as owner.' },
-      { tag: 'Step 4 of 5', caption: 'The database confirms the thread is stored.' },
+      { tag: 'Step 3 of 5', caption: 'The Agent Server writes the thread to the resource database, including the metadata that records Alice as owner.' },
+      { tag: 'Step 4 of 5', caption: 'The resource database confirms the thread is stored.' },
       { tag: 'Step 5 of 5', caption: 'The thread ID is returned to Alice. The owner metadata is now persisted — it will be used to filter reads.' },
     ]
 });
 
 buildDiagram({
     id: 'sd-authz-read',
-    participants: ['Bob', 'Agent Server', 'Database'],
+    participants: ['Bob', 'Agent Server', 'Resource Database'],
     cx: [130, 500, 870],
     bw: 140, bh: 40, tby: 10, bby: 350, vw: 1000, vh: 400,
     buildSteps: function(a) {
@@ -249,8 +358,8 @@ buildDiagram({
     },
     steps: [
       { tag: 'Step 1 of 5', caption: 'Bob sends a request for Alice\'s thread using his own bearer token.' },
-      { tag: 'Step 2 of 5', caption: '@auth.authenticate confirms Bob is user2. @auth.on returns the filter {owner: "user2"} — this is applied to the database query automatically.' },
-      { tag: 'Step 3 of 5', caption: 'The Agent Server queries the database with the filter applied: only threads where metadata.owner equals "user2" are returned.' },
+      { tag: 'Step 2 of 5', caption: '@auth.authenticate confirms Bob is user2. @auth.on returns the filter {owner: "user2"} — this is applied to the resource database query automatically.' },
+      { tag: 'Step 3 of 5', caption: 'The Agent Server queries the resource database with the filter applied: only threads where metadata.owner equals "user2" are returned.' },
       { tag: 'Step 4 of 5', caption: 'Alice\'s thread has owner: "user1" in its metadata. It does not match the filter, so no record is returned.' },
       { tag: 'Step 5 of 5', caption: 'The Agent Server returns 404 — not 403. From the server\'s perspective, there is no matching thread for Bob to be forbidden from.' },
     ]

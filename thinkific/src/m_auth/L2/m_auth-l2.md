@@ -110,7 +110,7 @@ Start the server:
 
 ```bash
 cd python/m_auth/l2
-langgraph dev --no-browser
+uv run langgraph dev --no-browser
 ```
 
 <Tip>

@@ -163,7 +163,7 @@ An `@auth.on` handler runs after authentication and receives two arguments: the 
 async def add_owner(ctx: Auth.types.AuthContext, value: dict) -> dict:
     filters = {"owner": ctx.user.identity}
     metadata = value.setdefault("metadata", {})
-    metadata.update(filters)
+    metadata.update(filters)  # updates value["metadata"]
     return filters
 ```
 
