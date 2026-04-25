@@ -1,0 +1,14 @@
+[project]
+name = "m-auth-l2"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+
+dependencies = [
+    "langgraph>=1.0.0,<2.0",
+    "langchain-core>=1.3.0,<2.0",
+    "langgraph-sdk",
+    "langgraph-cli[inmem]>=0.4.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["agent*"]

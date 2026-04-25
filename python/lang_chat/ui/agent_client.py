@@ -42,15 +42,19 @@ LESSONS = [
 #    URL comes from the UI; API key comes from .env
 # ---------------------------------------------------------------------------
 
-def create_client(deployment_url: str) -> LangGraphClient:
+def create_client(deployment_url: str, token: str | None = None) -> LangGraphClient:
     """Create a LangGraph client.
 
     Args:
         deployment_url: The LangGraph deployment URL entered in the UI.
                         Use http://127.0.0.1:2024 for local LangGraph Studio.
+        token: Optional JWT to forward as Authorization: Bearer — used in step 2
+               when auth.py is enabled in langgraph.json. Safe to pass in step 1;
+               the header is ignored when auth is disabled.
     """
     api_key = os.environ.get("LANGSMITH_API_KEY", "")
-    return get_client(url=deployment_url, api_key=api_key)
+    headers = {"Authorization": f"Bearer {token}"} if token else {}  # step 2: forward JWT to agent
+    return get_client(url=deployment_url, api_key=api_key, headers=headers)
 
 
 # ---------------------------------------------------------------------------
@@ -208,5 +212,39 @@ async def get_student_profile(
             key="profile",
         )
         return item["value"] if item else None
+    except Exception:
+        return None
+
+
+async def write_sessions(client: LangGraphClient, namespace: str, sessions: list) -> None:
+    """Persist sessions to the Store so they can be reused on subsequent logins."""
+    await client.store.put_item((namespace,), key="sessions", value={"sessions": sessions})
+
+
+async def get_sessions(client: LangGraphClient, namespace: str) -> list | None:
+    """Read persisted sessions from the Store. Returns None if not found."""
+    try:
+        item = await client.store.get_item((namespace,), key="sessions")
+        return item["value"]["sessions"] if item else None
+    except Exception:
+        return None
+
+
+async def write_identity_map(client: LangGraphClient, identity: str, namespace: str) -> None:
+    """Write an identity → namespace mapping to the Store.
+
+    Allows login to find the student's profile (stored under first_last namespace)
+    from an email or username identity. Periods and @ in identity are escaped.
+    """
+    safe = identity.replace("@", "_at_").replace(".", "_")
+    await client.store.put_item(("__identity_map__",), key=safe, value={"namespace": namespace})
+
+
+async def lookup_namespace(client: LangGraphClient, identity: str) -> str | None:
+    """Look up the Store namespace for a given identity (email or username)."""
+    safe = identity.replace("@", "_at_").replace(".", "_")
+    try:
+        item = await client.store.get_item(("__identity_map__",), key=safe)
+        return item["value"]["namespace"] if item else None
     except Exception:
         return None

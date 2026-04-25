@@ -24,47 +24,6 @@
       margin-bottom: 16px;
     }
 
-    /* Config bar */
-    .config {
-      background: #0D1322;
-      border: 1px solid #2F4B68;
-      border-radius: 10px;
-      padding: 16px;
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-      align-items: flex-end;
-    }
-
-    .config-field {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      flex: 1;
-      min-width: 200px;
-    }
-
-    .config-field label {
-      font-size: 10px;
-      color: #40668D;
-    }
-
-    .config-field input {
-      background: #161F34;
-      border: 1px solid #2F4B68;
-      border-radius: 6px;
-      color: #F2FAFF;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 11px;
-      padding: 8px 10px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .config-field input:focus { border-color: #7FC8FF; }
-    .config-field input::placeholder { color: #2F4B68; }
-
     /* Tabs */
     .tabs {
       display: flex;
@@ -280,10 +239,7 @@
     .student-field input::placeholder,
     .student-field textarea::placeholder { color: #2F4B68; }
 
-    .student-field input:disabled {
-      color: #40668D;
-      cursor: not-allowed;
-    }
+    .student-field input[type="password"] { letter-spacing: 0.1em; }
 
     .name-row {
       display: flex;
@@ -306,6 +262,8 @@
     }
     .action-btn:hover { background: #0085FF; }
     .action-btn:disabled { background: #161F34; color: #2F4B68; cursor: not-allowed; }
+    .action-btn.secondary { background: #161F34; color: #40668D; }
+    .action-btn.secondary:hover { background: #1E3048; color: #7FC8FF; }
 
     .status-msg {
       font-size: 10px;
@@ -315,6 +273,47 @@
     }
     .status-msg.error { color: #FBB0A5; }
     .status-msg.success { color: #7FC8FF; }
+
+    .toggle-link {
+      font-size: 10px;
+      color: #40668D;
+      margin-top: 16px;
+    }
+    .toggle-link span {
+      color: #7FC8FF;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    /* Resources table */
+    .resources-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      margin-top: 12px;
+    }
+    .resources-table th {
+      text-align: left;
+      color: #40668D;
+      padding: 6px 10px;
+      border-bottom: 1px solid #161F34;
+    }
+    .resources-table td {
+      color: #F2FAFF;
+      padding: 6px 10px;
+      border-bottom: 1px solid #0D1322;
+      word-break: break-all;
+    }
+    .resources-table tr:hover td { background: #0D1322; }
+
+    .resources-note {
+      font-size: 10px;
+      color: #40668D;
+      margin-bottom: 16px;
+      padding: 10px;
+      border: 1px solid #161F34;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
@@ -323,36 +322,95 @@
 
 <!-- Tabs -->
 <div class="tabs" id="tabBar">
-  <button class="tab student-tab active" data-tab="config" onclick="switchTab('config')">config</button>
+  <button class="tab student-tab active" data-tab="config" onclick="switchTab('config')">account</button>
+  <button class="tab student-tab" data-tab="resources" onclick="switchTab('resources')">resources</button>
   <!-- lesson tabs injected by JS -->
 </div>
 
-<!-- Config tab -->
+<!-- Account tab -->
 <div id="tab-config" class="tab-content active">
   <div class="student-panel">
-    <h2>configuration</h2>
-    <h2>student profile</h2>
-    <div class="name-row">
+    <h2 id="accountHeading">account</h2>
+
+    <!-- Login form -->
+    <div id="loginSection">
       <div class="student-field">
-        <label>first name</label>
-        <input type="text" id="firstName" placeholder="Jane" value="Jane">
+        <label>username</label>
+        <input type="text" id="loginUsername" placeholder="your username" autocomplete="username">
       </div>
       <div class="student-field">
-        <label>last name</label>
-        <input type="text" id="lastName" placeholder="Doe" value="Doe">
+        <label>password</label>
+        <input type="password" id="loginPassword" placeholder="your password" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') login()">
       </div>
+      <button class="action-btn" onclick="login()">log in</button>
+      <div class="status-msg" id="loginStatus"></div>
+      <p class="toggle-link">no account? <span onclick="toggleRegister()">register</span></p>
     </div>
-    <div class="student-field">
-      <label>course goals</label>
-      <textarea id="goals" rows="3" placeholder="what do you want to get out of this course?"></textarea>
+
+    <!-- Register form (hidden by default) -->
+    <div id="registerSection" style="display:none">
+      <div class="name-row">
+        <div class="student-field">
+          <label>first name</label>
+          <input type="text" id="regFirstName" placeholder="Jane" autocomplete="given-name">
+        </div>
+        <div class="student-field">
+          <label>last name</label>
+          <input type="text" id="regLastName" placeholder="Doe" autocomplete="family-name">
+        </div>
+      </div>
+      <div class="student-field">
+        <label>username</label>
+        <input type="text" id="regUsername" placeholder="janedoe" autocomplete="username">
+      </div>
+      <div class="student-field">
+        <label>password</label>
+        <input type="password" id="regPassword" placeholder="choose a password" autocomplete="new-password">
+      </div>
+      <div class="student-field">
+        <label>course goals</label>
+        <textarea id="regGoals" rows="3" placeholder="what do you want to get out of this course?"></textarea>
+      </div>
+      <div class="student-field">
+        <label>about you — interests, skill level, how you like to learn</label>
+        <textarea id="regPreferences" rows="3" placeholder="e.g. Python dev, 2 years experience, new to LangGraph"></textarea>
+      </div>
+      <button class="action-btn" onclick="register()">register</button>
+      <div class="status-msg" id="registerStatus"></div>
+      <p class="toggle-link">already have an account? <span onclick="toggleRegister()">log in</span></p>
     </div>
-    <div class="student-field">
-      <label>about you — interests, skill level, how you like to learn</label>
-      <textarea id="preferences" rows="4" placeholder="e.g. I'm a Python developer with 2 years experience, new to LangGraph. I like hands-on examples and concise explanations."></textarea>
+
+    <!-- Profile section (shown when logged in) -->
+    <div id="profileSection" style="display:none">
+      <p style="font-size:11px; color:#40668D; margin-bottom:20px;">
+        logged in as <span id="usernameDisplay" style="color:#7FC8FF"></span>
+      </p>
+      <div class="student-field">
+        <label>course goals</label>
+        <textarea id="goals" rows="3" placeholder="what do you want to get out of this course?"></textarea>
+      </div>
+      <div class="student-field">
+        <label>about you — interests, skill level, how you like to learn</label>
+        <textarea id="preferences" rows="4" placeholder="e.g. Python dev, 2 years experience, new to LangGraph"></textarea>
+      </div>
+      <button class="action-btn" onclick="studentUpdate()">update profile</button>
+      <button class="action-btn secondary" onclick="logout()" style="margin-left:8px">log out</button>
+      <div class="status-msg" id="studentStatus"></div>
     </div>
-    <button class="action-btn" id="startBtn" onclick="studentStart()">start</button>
-    <button class="action-btn" id="updateBtn" onclick="studentUpdate()" style="display:none">update</button>
-    <div class="status-msg" id="studentStatus"></div>
+  </div>
+</div>
+
+<!-- Resources tab -->
+<div id="tab-resources" class="tab-content">
+  <div class="student-panel" style="max-width:900px">
+    <h2>resources</h2>
+    <div class="resources-note">
+      step 1 — all resources shown. filtering by owner added in step 2 when @auth.on is enabled.
+    </div>
+    <div id="resourcesContent">
+      <p style="font-size:11px; color:#40668D">log in to see your sessions.</p>
+    </div>
   </div>
 </div>
 
@@ -366,21 +424,22 @@
   const STORAGE_KEY = 'tutor:state';
 
   let state = {
-    namespace: null,        // e.g. "jane_doe"
+    token: null,           // JWT string
+    username: null,
+    namespace: null,
     started: false,
-    sessions: [],           // [{lesson_id, assistant_id, thread_id}, ...]
+    sessions: [],          // [{lesson_id, assistant_id, thread_id}, ...]
   };
 
   // Per-lesson streaming state
   const lessonState = {};   // lesson_id → {isStreaming}
 
-  // Load saved state from localStorage
   function loadState() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        state = JSON.parse(saved);
-        if (state.started) applyStartedState();
+        state = { ...state, ...JSON.parse(saved) };
+        if (state.token) applyLoggedInState();
       }
     } catch (e) { /* ignore */ }
   }
@@ -393,7 +452,7 @@
   // Tab management
   // ---------------------------------------------------------------------------
 
-  let activeTab = 'config'; // default tab
+  let activeTab = 'config';
 
   function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -407,6 +466,7 @@
     });
 
     activeTab = tabId;
+    if (tabId === 'resources' && state.token) renderResources();
   }
 
   // ---------------------------------------------------------------------------
@@ -421,7 +481,6 @@
     const body = document.body;
 
     lessons.forEach(lesson => {
-      // Tab button
       const btn = document.createElement('button');
       btn.className = lesson.active ? 'tab' : 'tab disabled';
       btn.dataset.tab = lesson.id;
@@ -432,7 +491,6 @@
       if (lesson.active) btn.onclick = () => switchTab(lesson.id);
       tabBar.appendChild(btn);
 
-      // Tab content
       const content = document.createElement('div');
       content.id = `tab-${lesson.id}`;
       content.className = 'tab-content';
@@ -476,49 +534,145 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Student start / update
+  // Account — login / register / logout
   // ---------------------------------------------------------------------------
 
-  async function studentStart() {
-    const firstName = document.getElementById('firstName').value.trim() || 'Jane';
-    const lastName = document.getElementById('lastName').value.trim() || 'Doe';
-    const goals = document.getElementById('goals').value.trim();
-    const preferences = document.getElementById('preferences').value.trim();
-    const statusEl = document.getElementById('studentStatus');
+  let showingRegister = false;
 
-    document.getElementById('startBtn').disabled = true;
-    statusEl.textContent = 'creating sessions...';
+  function toggleRegister() {
+    showingRegister = !showingRegister;
+    document.getElementById('loginSection').style.display = showingRegister ? 'none' : 'block';
+    document.getElementById('registerSection').style.display = showingRegister ? 'block' : 'none';
+  }
+
+  async function login() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const statusEl = document.getElementById('loginStatus');
+
+    if (!username || !password) {
+      statusEl.textContent = 'enter username and password';
+      statusEl.className = 'status-msg error';
+      return;
+    }
+
+    statusEl.textContent = 'logging in...';
     statusEl.className = 'status-msg';
 
     try {
-      const res = await fetch('/student/start', {
+      const res = await fetch('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ first_name: firstName, last_name: lastName, goals, preferences }),
+        body: JSON.stringify({ username, password }),
       });
 
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail === 'invalid_credentials' ? 'invalid username or password' : err.detail);
+      }
 
+      const data = await res.json();
+      state.token = data.token;
+      state.username = data.namespace;
       state.namespace = data.namespace;
       state.sessions = data.sessions;
       state.started = true;
+
+      if (data.profile) {
+        document.getElementById('goals').value = data.profile.goals || '';
+        document.getElementById('preferences').value = data.profile.preferences || '';
+      }
+
       saveState();
+      applyLoggedInState();
 
-      applyStartedState();
-      // Rebuild lesson tabs to inject correct thread IDs
-      document.querySelectorAll('.tab:not(.student-tab), .tab-content:not(#tab-config)').forEach(el => el.remove());
+      document.querySelectorAll('.tab:not(.student-tab), .tab-content:not(#tab-config):not(#tab-resources)').forEach(el => el.remove());
       await buildLessonTabs();
-
-      statusEl.textContent = `started as ${firstName} ${lastName}`;
-      statusEl.className = 'status-msg success';
 
     } catch (err) {
       statusEl.textContent = err.message;
       statusEl.className = 'status-msg error';
-      document.getElementById('startBtn').disabled = false;
     }
   }
+
+  async function register() {
+    const firstName = document.getElementById('regFirstName').value.trim();
+    const lastName = document.getElementById('regLastName').value.trim();
+    const username = document.getElementById('regUsername').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const goals = document.getElementById('regGoals').value.trim();
+    const preferences = document.getElementById('regPreferences').value.trim();
+    const statusEl = document.getElementById('registerStatus');
+
+    if (!firstName || !lastName || !username || !password) {
+      statusEl.textContent = 'first name, last name, username, and password are required';
+      statusEl.className = 'status-msg error';
+      return;
+    }
+
+    statusEl.textContent = 'registering...';
+    statusEl.className = 'status-msg';
+
+    try {
+      const res = await fetch('/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, first_name: firstName, last_name: lastName, goals, preferences }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail === 'username_taken' ? 'username already taken' : err.detail);
+      }
+
+      statusEl.textContent = 'registered! you can now log in.';
+      statusEl.className = 'status-msg success';
+
+      // Switch to login form and pre-fill username
+      setTimeout(() => {
+        toggleRegister();
+        document.getElementById('loginUsername').value = username;
+        document.getElementById('loginPassword').focus();
+      }, 800);
+
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.className = 'status-msg error';
+    }
+  }
+
+  async function logout() {
+    await fetch('/auth/logout', { method: 'POST' }).catch(() => {});
+    state = { token: null, username: null, namespace: null, started: false, sessions: [] };
+    saveState();
+
+    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginStatus').textContent = '';
+
+    document.getElementById('profileSection').style.display = 'none';
+    document.getElementById('loginSection').style.display = 'block';
+    if (showingRegister) toggleRegister();
+
+    document.getElementById('resourcesContent').innerHTML =
+      '<p style="font-size:11px; color:#40668D">log in to see your sessions.</p>';
+
+    document.querySelectorAll('.tab:not(.student-tab), .tab-content:not(#tab-config):not(#tab-resources)').forEach(el => el.remove());
+
+    switchTab('config');
+  }
+
+  function applyLoggedInState() {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('registerSection').style.display = 'none';
+    document.getElementById('profileSection').style.display = 'block';
+    document.getElementById('usernameDisplay').textContent = state.username;
+    renderResources();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Student profile update
+  // ---------------------------------------------------------------------------
 
   async function studentUpdate() {
     const goals = document.getElementById('goals').value.trim();
@@ -531,8 +685,11 @@
     try {
       const res = await fetch('/student/update', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ namespace: state.namespace, goals, preferences }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`,
+        },
+        body: JSON.stringify({ goals, preferences }),
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -544,8 +701,50 @@
     }
   }
 
-  function applyStartedState() {
-    document.getElementById('updateBtn').style.display = 'inline-block';
+  // ---------------------------------------------------------------------------
+  // Resources tab
+  // ---------------------------------------------------------------------------
+
+  async function renderResources() {
+    const el = document.getElementById('resourcesContent');
+    el.innerHTML = '<p style="font-size:11px; color:#40668D">loading...</p>';
+
+    try {
+      const res = await fetch('/resources', {
+        headers: { 'Authorization': `Bearer ${state.token}` },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { assistants, threads } = await res.json();
+
+      const assistantRows = assistants.map(a => `
+        <tr>
+          <td>${a.name || '—'}</td>
+          <td>${a.assistant_id}</td>
+          <td>${a.graph_id}</td>
+        </tr>`).join('');
+
+      const threadRows = threads.map(t => `
+        <tr>
+          <td>${t.thread_id}</td>
+          <td>${t.status || '—'}</td>
+          <td>${t.created_at ? new Date(t.created_at).toLocaleString() : '—'}</td>
+        </tr>`).join('');
+
+      el.innerHTML = `
+        <p style="font-size:11px; color:#7FC8FF; margin-bottom:16px">assistants (${assistants.length})</p>
+        <table class="resources-table" style="margin-bottom:24px">
+          <thead><tr><th>name</th><th>assistant id</th><th>graph</th></tr></thead>
+          <tbody>${assistantRows || '<tr><td colspan="3" style="color:#40668D">none</td></tr>'}</tbody>
+        </table>
+        <p style="font-size:11px; color:#7FC8FF; margin-bottom:16px">threads (${threads.length})</p>
+        <table class="resources-table">
+          <thead><tr><th>thread id</th><th>status</th><th>created</th></tr></thead>
+          <tbody>${threadRows || '<tr><td colspan="3" style="color:#40668D">none</td></tr>'}</tbody>
+        </table>`;
+
+    } catch (err) {
+      el.innerHTML = `<p style="font-size:11px; color:#FBB0A5">${err.message}</p>`;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -553,7 +752,7 @@
   // ---------------------------------------------------------------------------
 
   function ask(question) {
-    if (activeTab && activeTab !== 'config') {
+    if (activeTab && activeTab !== 'config' && activeTab !== 'resources') {
       document.getElementById(`input-${activeTab}`).value = question;
       sendMessage(activeTab);
     }
@@ -569,7 +768,7 @@
   async function sendMessage(lessonId) {
     if (lessonState[lessonId]?.isStreaming) return;
     if (!state.started) {
-      alert('please complete your student profile first');
+      alert('please log in first');
       switchTab('config');
       return;
     }
@@ -598,7 +797,10 @@
     try {
       const res = await fetch('/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`,
+        },
         body: JSON.stringify({
           message,
           assistant_id: session.assistant_id,

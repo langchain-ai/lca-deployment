@@ -6,5 +6,8 @@
   "http": {
     "app": "./ui/app.py:app"
   },
+  "auth": {
+    "path": "./agent/auth_supabase.py:auth"
+  },
   "env": ".env"
 }

@@ -1,0 +1,278 @@
+# Authentication and Authorization: Lesson 2 — Local Authentication
+
+In the previous lesson you learned what `@auth.authenticate` does and where it sits in the request pipeline. In this lesson you will implement one — a working handler that validates tokens from a hardcoded list.
+
+This is not production-ready (a later lesson replaces it with real JWT validation), but it is the fastest way to understand the mechanics before adding complexity.
+
+By the end of this lesson you will have:
+- A working `auth.py` with an `@auth.authenticate` handler
+- A self-contained lesson project configured to run it
+- Confirmed that unauthenticated requests are rejected and authenticated ones succeed
+
+<style>@import url('../../shared/sd-components.css');</style>
+<script src="../../shared/sd-components.js"></script>
+
+<div class="sd-wrap" id="sd-token-flow"></div>
+
+---
+
+## Project structure
+
+Each lesson in this module is a self-contained project you can run with `langgraph dev`:
+
+```
+python/m_auth/l2/
+├── agent/
+│   ├── __init__.py
+│   └── graph.py        ← simple echo agent
+├── auth.py             ← authentication handler (deployment-wide)
+├── .env                ← empty for this lesson
+├── .env.example
+├── langgraph.json
+└── pyproject.toml
+```
+
+Because this lesson uses custom authentication, no `LANGSMITH_API_KEY` is required. The `@auth.authenticate` handler takes over from LangSmith's default key-based auth entirely, so the `.env` file can be left empty.
+
+---
+
+## Step 1: Create auth.py
+
+Create `auth.py` at the root of your project. This file will hold all of your authentication and authorization logic across these lessons — you will grow it in the following lessons without replacing it.
+
+```python
+from langgraph_sdk import Auth
+
+# Stand-in for a real user database. Do not use hardcoded tokens in production.
+VALID_TOKENS = {
+    "alice-token": {"id": "user1", "name": "Alice"},
+    "bob-token":   {"id": "user2", "name": "Bob"},
+}
+
+auth = Auth()
+
+@auth.authenticate
+async def get_current_user(authorization: str | None) -> Auth.types.MinimalUserDict:
+    """Validate the bearer token and return the authenticated user."""
+    if not authorization:
+        raise Auth.exceptions.HTTPException(status_code=401, detail="Missing token")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or token not in VALID_TOKENS:
+        raise Auth.exceptions.HTTPException(status_code=401, detail="Invalid token")
+    user_data = VALID_TOKENS[token]
+    return {
+        "identity": user_data["id"],
+    }
+```
+
+The handler receives the raw `Authorization` header. It splits off the `Bearer` scheme, looks up the token, and either returns a user dict or raises a 401.
+
+<Tip>
+**What happens on each path**
+
+If the handler **raises** `Auth.exceptions.HTTPException(status_code=401)`, LangGraph returns that status to the client immediately. The request never reaches your agent — no threads are created, no runs queued.
+
+If the handler **returns** a `MinimalUserDict`, the request continues. LangGraph stores the dict in `config["configurable"]["langgraph_auth_user"]` so your graph nodes can access it.
+</Tip>
+
+---
+
+## Step 2: Register the handler
+
+Tell LangGraph where to find your auth handler by adding an `auth` section to `langgraph.json`:
+
+```json
+{
+  "dependencies": ["."],
+  "graphs": {
+    "agent": "./agent/graph.py:graph"
+  },
+  "auth": {
+    "path": "./auth.py:auth"
+  },
+  "env": ".env"
+}
+```
+
+The `path` value is `file:object` — the Python file path relative to `langgraph.json`, a colon, then the name of the `Auth` instance inside it. LangGraph wires this in on the next server start.
+
+<Tip>
+**LangGraph Studio access**
+
+By default, LangGraph Studio can still reach your agent even with custom auth enabled — useful during development. When you are ready for production, add `"disable_studio_auth": true` to the `auth` block in `langgraph.json` to close that door.
+</Tip>
+
+---
+
+## Step 3: Test your authentication
+
+Start the server:
+
+```bash
+cd python/m_auth/l2
+langgraph dev --no-browser
+```
+
+<Tip>
+**LangSmith warnings in the server output**
+
+In this lesson we are intentionally running without a `LANGSMITH_API_KEY` to demonstrate that custom authentication works independently of LangSmith's own key system. You may see warnings in the `langgraph dev` output like:
+
+`Failed to POST https://api.smith.langchain.com/runs/multipart — 403 Forbidden`
+
+These come from the `langgraph dev` server itself trying to send tracing and metadata to LangSmith in the background. They are not related to your `@auth.authenticate` handler and do not affect the lesson. Your custom auth is working correctly when you see the 401 and 200 responses in the client output.
+</Tip>
+
+This is the client code you will run (`client.py` in the project root):
+
+```python
+import asyncio
+from langgraph_sdk import get_client
+
+URL = "http://localhost:2024"
+
+async def main():
+    # Unknown token — not in VALID_TOKENS, should be blocked
+    hacker = get_client(url=URL, headers={"Authorization": "Bearer hacker-token"})
+    try:
+        await hacker.threads.create()
+        print("❌ Should have been blocked!")
+    except Exception as e:
+        print(f"✅ Unknown token correctly blocked: {e}")
+
+    # Valid token (Alice)
+    alice = get_client(url=URL, headers={"Authorization": "Bearer alice-token"})
+    thread = await alice.threads.create()
+    print(f"✅ Alice created thread: {thread['thread_id']}")
+
+    result = await alice.runs.wait(
+        thread["thread_id"], "agent",
+        input={"messages": [{"role": "user", "content": "Hello from Alice!"}]},
+    )
+    print(f"✅ Response: {result['messages'][-1]['content']}")
+
+    # Valid token (Bob)
+    bob = get_client(url=URL, headers={"Authorization": "Bearer bob-token"})
+    thread = await bob.threads.create()
+    print(f"✅ Bob created thread: {thread['thread_id']}")
+
+asyncio.run(main())
+```
+
+Run it in a second terminal:
+
+```bash
+uv run client.py
+```
+
+Expected output:
+
+```
+✅ Unknown token correctly blocked: Invalid token
+✅ Alice created thread: 019dc202-057f-7f72-9af3-0b3699c52fe9
+✅ Response: [user1] Hello from Alice!
+✅ Bob created thread: 019dc202-088c-72a2-b2ab-2334a5003036
+```
+
+At this point Alice and Bob can still read each other's threads — authorization is the job of `@auth.on`, which you will add in the next lesson.
+
+---
+
+## Accessing the user in your graph nodes
+
+The dict returned by `@auth.authenticate` is available to every node via the config. You already saw this working — the `[user1] Hello from Alice!` response came from `agent/graph.py`:
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+def chat(state: MessagesState, config: RunnableConfig) -> dict:
+    user = config["configurable"].get("langgraph_auth_user", {})
+    identity = user.get("identity", "unknown")
+    last = state["messages"][-1].content
+    return {"messages": [AIMessage(content=f"[{identity}] {last}")]}
+```
+
+The `[user1]` prefix in the response is `identity` read directly from the config — proof that the authenticated user flows into the graph on every request. You can include any fields you like beyond `identity`. In later lessons you will add `permissions` and `role` here, and your graph nodes will use them to personalise responses.
+
+---
+
+## What you learned in this lesson
+
+- **`VALID_TOKENS`** — a hardcoded dict used as a stand-in for a real user database. It makes the lookup mechanic visible before adding JWT complexity.
+- **`@auth.authenticate`** — validates the `Authorization` header, extracts the bearer token, and returns a `MinimalUserDict`. An invalid or missing token raises a 401 and the agent never executes.
+- **Registering the handler** — add an `auth.path` key to `langgraph.json` pointing to `file:Auth_instance`. The function name does not matter, only the decorator.
+- **Studio access** — Studio remains open by default even with custom auth. Use `disable_studio_auth: true` to close it.
+- **User in graph nodes** — the returned dict is available at `config["configurable"]["langgraph_auth_user"]` in every graph node.
+
+---
+
+## Up next
+
+In the next lesson you will add authorization — giving each user their own private conversations. The same `auth.py` file grows to include `@auth.on` handlers that stamp each resource with its owner on creation and filter by owner on every read.
+
+---
+
+## Check your understanding
+
+<MCQ
+    question="Which HTTP header does @auth.authenticate inspect?"
+    choices='["Content-Type", "Authorization", "X-LangSmith-Token", "User-Agent"]'
+    correctIndex={1}
+    explanation="Despite the name, the Authorization header is where HTTP clients send credentials for authentication. LangGraph injects its value as the authorization argument to the handler. The standard format is: Authorization: Bearer token-value."
+/>
+
+<MCQ
+    question="What happens when the handler raises an HTTPException with status 401?"
+    choices='["The request proceeds with an anonymous identity", "A 401 is returned to the client and the agent never runs", "LangGraph retries with the LANGSMITH_API_KEY", "The token is stored and retried later"]'
+    correctIndex={1}
+    explanation="Raising an HTTPException immediately terminates the request pipeline. LangGraph returns the status code to the client and the agent graph never executes — no threads or runs are created."
+/>
+
+<MCQ
+    question="What must the dict returned by @auth.authenticate include at minimum?"
+    choices='["name and email", "identity", "role and permissions", "token and expiry"]'
+    correctIndex={1}
+    explanation="MinimalUserDict only requires the identity field. All other fields such as name, role, and permissions are optional. LangGraph uses identity to guarantee that ctx.user.identity is always available in @auth.on handlers."
+/>
+
+<MCQ
+    question="How do you tell LangGraph which auth handler to use?"
+    choices='["Import it in graph.py", "Add an auth path key to langgraph.json", "Name the function authenticate", "Set an AUTH_PATH environment variable"]'
+    correctIndex={1}
+    explanation="The auth.path key in langgraph.json points LangGraph to the file and Auth instance — for example ./agent/auth.py:auth. LangGraph wires this in on server start. The function name does not matter, only the @auth.authenticate decorator does."
+/>
+
+<MCQ
+    question="After authentication, can Alice see threads that Bob created?"
+    choices='["No, @auth.authenticate isolates users automatically", "Yes, until you add @auth.on handlers in the next lesson", "Yes, but only threads from the last 24 hours", "No, LangGraph isolates by identity by default"]'
+    correctIndex={1}
+    explanation="@auth.authenticate only confirms who the user is — it does not restrict what they can see. Resource-level isolation requires @auth.on handlers that stamp each resource with its owner and filter by that owner on reads. That is the job of the next lesson."
+/>
+
+<script>
+buildDiagram({
+    id: 'sd-token-flow',
+    participants: ['Client', 'Agent Server', 'Agent'],
+    cx: [130, 500, 870],
+    bw: 150, bh: 40, tby: 10, bby: 415, vw: 1000, vh: 465,
+    buildSteps: function(a) {
+      return [
+        labelBox(500, 55, 280, ['server pre-loads VALID_TOKENS:', '"alice-token" → user1,', '"bob-token" → user2']) +
+        labelBox(130, 55, 230, ['client pre-loads token:', 'alice-token']),
+        solidArrow(130, 500, 145, 'POST /threads', 310, a),
+        labelBox(500, 180, 280, ['@auth.authenticate fires', 'extract and look up token']),
+        labelBox(500, 255, 280, ['token found → return {identity: "user1"}', '(invalid token → 401 to client)']),
+        solidArrow(500, 870, 340, 'request + user context', 690, a),
+        dashedArrow(870, 130, 400, '200 OK — thread created', 600, a),
+      ];
+    },
+    steps: [
+      { tag: 'Step 1 of 6', caption: 'At coding time, both sides pre-load their tokens. The server has VALID_TOKENS ready — mapping tokens to users. The client has its token hardcoded; in a later lesson it will be a real JWT issued by an identity provider.' },
+      { tag: 'Step 2 of 6', caption: 'The client sends the request, attaching the token in the Authorization header. The header travels with every request.' },
+      { tag: 'Step 3 of 6', caption: 'LangGraph fires @auth.authenticate before the request goes anywhere else. The handler extracts the token from the header.' },
+      { tag: 'Step 4 of 6', caption: 'The token is looked up in VALID_TOKENS. If found, the handler returns {identity: "user1"}. If missing or invalid, a 401 is returned and the agent never executes.' },
+      { tag: 'Step 5 of 6', caption: 'With authentication confirmed, LangGraph forwards the request to the agent graph. The full user dict is stored in the config — every node can read it.' },
+      { tag: 'Step 6 of 6', caption: 'The agent processes the request and returns a response. The thread is created. At this stage both Alice and Bob can still see each other\'s threads — authorization comes in the next lesson.' },
+    ]
+});
+</script>
