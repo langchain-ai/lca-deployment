@@ -1,0 +1,481 @@
+# Authentication and Authorization: Lesson 5 — Auth in the Tutor
+
+In the previous lessons you successfully used the authentication and authorization features available to you. In this lesson you will use them while implementing a common JWT stateless authentication pattern. This is just one possible pattern — you are not limited to it. Working through a more complete implementation helps you see the primitives you have learned in a broader context.
+
+First, we will describe the JWT stateless authentication pattern. You have been using it in the tutor without a detailed explanation so far. Then we will describe some of the specifics of its implementation in the tutor.
+
+<style>@import url('../../shared/sd-components.css');</style>
+<script src="../../shared/sd-components.js"></script>
+
+---
+
+## JWT Stateless Authentication
+
+In this pattern, a shared secret (`JWT_SECRET`) is used to sign tokens at login and verify them on every subsequent request — no database lookup required. The sequence below shows the basics:
+
+<div class="sd-wrap" id="sd-jwt-basic"></div>
+
+### What is a JWT?
+
+A JWT (JSON Web Token) has three parts: a header, a payload, and a signature. The payload carries claims about the user — identity, role, expiry:
+
+```json
+{
+  "sub": "alice",
+  "namespace": "alice_smith",
+  "role": "user",
+  "exp": 1714000000
+}
+```
+
+The signature is created by combining the header and payload with `JWT_SECRET`. Anyone who holds the same secret can verify the signature locally — no round-trip to the issuer needed. This is what makes the pattern "stateless".
+
+---
+
+## The Tutor Implementation
+
+The tutor uses a simple version of this pattern. The "server" in the diagram above has two major components: `app.py`, which handles the UI and login, and the agent backend which runs the LangGraph graph and Store. `app.py` converts UI requests to agent requests, handles login, and issues JWT tokens.
+
+The diagram below shows the full request flow. **Agent & Store** represents the LangGraph-managed side of the deployment — the auth handler, agent graph, and store — as distinct from `app.py`. **UI App** is `app.py` itself.
+
+<div class="sd-wrap" id="sd-tutor-auth"></div>
+
+### Details
+
+Requests to the app also traverse the same authentication path, shown as the **Auth Layer** in the diagram. As you saw in Lesson 1, you can enable `@auth.authenticate` on custom routes with `enable_custom_route_auth`. For this demonstration it has not been enabled, so custom routes to `app.py` — including `/auth/login` — are not authenticated. In production, login routes would remain public but other custom routes should be protected.
+
+Requests from `app.py` to the agent are authenticated and authorized as you have seen in previous lessons. `@auth.authenticate` validates the request by verifying the JWT signature locally using `JWT_SECRET`.
+
+The login process requires `app.py` to check user information. Since `app.py` is stateless, it uses the persistent Store available in the deployment. To access the Store, `app.py` generates a **service token** — a short-lived admin JWT signed with `JWT_SECRET`. The request is then authenticated by `@auth.authenticate`, and `@auth.on` bypasses filtering because the service token carries admin permissions. Note that the Store itself requires authentication to access — this is why the service token is needed in the first place.
+
+---
+
+## `auth_local.py`
+
+Let's look at the `auth_local.py` that supports this. It follows the same two-handler structure from previous lessons — `@auth.authenticate` to identify the user, `@auth.on` to control access — with a few additions:
+
+```python {22-26,32-33,37-40,45-53}
+import os
+
+import jwt
+from langgraph_sdk import Auth
+
+auth = Auth()
+
+
+@auth.authenticate
+async def authenticate(authorization: str | None) -> dict:
+    """Validate JWT. Returns identity and permissions derived from the token's role field."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise Auth.exceptions.HTTPException(status_code=401, detail="Not authenticated")
+    token = authorization[7:]
+    try:
+        payload = jwt.decode(token, os.environ["JWT_SECRET"], algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise Auth.exceptions.HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise Auth.exceptions.HTTPException(status_code=401, detail="Invalid token")
+
+    username = payload["sub"]
+    role = payload.get("role", "user")
+    namespace = payload.get("namespace", username)
+    permissions = ["admin", "user"] if role == "admin" else ["user"]
+    return {"identity": username, "permissions": permissions, "namespace": namespace}
+
+
+@auth.on
+async def on_resource(ctx: Auth.types.AuthContext, value: dict):
+    """Stamp owner on creation; filter by owner on reads. Admins bypass filtering."""
+    if "admin" in ctx.permissions:
+        return  # admins see all resources
+
+    filters = {"owner": ctx.user.identity}
+
+    is_write = ctx.action in ("create", "update", "delete")
+    if is_write:
+        metadata = value.setdefault("metadata", {})
+        metadata.update(filters)
+
+    return filters
+
+
+@auth.on.store()
+async def on_store(ctx: Auth.types.AuthContext, value: dict):
+    """Restrict store access to the user's own namespace. Admins bypass."""
+    if "admin" in ctx.permissions:
+        return
+
+    namespace = tuple(value.get("namespace") or ())
+    if not namespace or namespace[0] != ctx.user.namespace:
+        raise Auth.exceptions.HTTPException(status_code=403, detail="Not authorized")
+```
+
+**`namespace` and return dict** — `namespace` is extracted from the JWT payload, where `app.py` baked it in at login (e.g. `"alice_smith"`). All three values — `identity`, `permissions`, and `namespace` — are returned and become accessible as `ctx.user.identity`, `ctx.user.permissions`, and `ctx.user.namespace`. The role is set at login, avoiding a circular dependency: looking up the role would require auth, which requires the role.
+
+**Admin bypass** — if `"admin"` is in `ctx.permissions`, `@auth.on` returns immediately with no filter. Admins can see all threads and resources. Regular students only see their own.
+
+**Write-only stamping** — ownership metadata is only stamped when creating or modifying a resource. Reads rely on `return filters` alone to scope results to the current user.
+
+**`@auth.on.store()`** — the broad `@auth.on` handler covers threads, runs, and assistants, but Store access needs its own handler. This restricts store reads and writes to the user's own namespace: the first element of the namespace tuple must match `ctx.user.namespace`. Admins bypass. Without this, any authenticated user could read any other user's store data.
+
+---
+
+## Demo: User Isolation and Admin Access
+
+With `auth_local.py` active, each student's threads are invisible to other students. An admin account bypasses all filtering and can see everything.
+
+### Setup
+
+This assumes you already have a tutor deployment running. All files are in your tutor directory — `python/lang_chat/` or `typescript/lang_chat/` depending on which version you are using.
+
+**1.** Confirm that `auth_local.py` is registered in `langgraph.json` in that directory:
+
+```json {9-11}
+{
+  "dependencies": ["."],
+  "graphs": {
+    "tutor": "./agent/agent.py:graph"
+  },
+  "http": {
+    "app": "./ui/app.py:app"
+  },
+  "auth": {
+    "path": "./agent/auth_local.py:auth"
+  },
+  "env": ".env"
+}
+```
+
+**2.** Add three variables to your `.env` file:
+
+```
+JWT_SECRET=<random string — used to sign and verify all tokens>
+ADMIN_NAME=admin
+ADMIN_PASSWORD=<your admin password>
+```
+
+**3.** Redeploy from your tutor directory:
+
+```bash
+cd python/lang_chat   # or typescript/lang_chat
+uv run langgraph deploy
+```
+
+The admin account is seeded automatically from `ADMIN_NAME`/`ADMIN_PASSWORD` on the first request after the new deployment is live.
+
+The deployment URL is printed at the end of the `langgraph deploy` output:
+
+```
+   Deployment successful!
+   URL: https://tutor-<hash>.us.langgraph.app
+```
+
+Open that URL in your browser to access the tutor UI.
+
+### Walkthrough
+
+1. **Register two students** — use the registration form to create two accounts with different names, for example Alice Smith and Bob Jones.
+
+2. **Log in as Alice** — send a few messages. Her threads are stamped with `owner: alice` and her store data lives in the `alice_smith` namespace.
+
+3. **Log in as Bob** — Bob's thread list is empty. He cannot see Alice's threads or access her store data.
+
+4. **Log in as admin** — the admin sees all threads from all students. The admin bypass in `@auth.on` fires immediately, returning without a filter.
+
+### What's Happening
+
+When Alice logs in, `app.py` issues a JWT:
+
+```json
+{
+  "sub": "alice",
+  "namespace": "alice_smith",
+  "role": "user",
+  "exp": 1714086400
+}
+```
+
+`@auth.authenticate` decodes this and returns `identity: "alice"`, `namespace: "alice_smith"`, `permissions: ["user"]`. Every thread Alice creates is stamped `owner: "alice"`. Every read is filtered to `{"owner": "alice"}`.
+
+The admin token carries `role: "admin"`, which produces `permissions: ["admin", "user"]`. The first line of `@auth.on` sees `"admin"` in permissions and returns immediately — no filter applied.
+
+---
+
+## Switching to Supabase
+
+The local pattern requires managing credentials yourself. Supabase provides a managed alternative — it still issues JWTs, but manages the entire lifecycle:
+
+- Built-in support for OAuth providers (Google, GitHub, etc.)
+- Handles refresh token rotation, session storage, and revocation
+- Row-Level Security (RLS) — your database respects the JWT identity directly
+- Magic links, OTP, MFA out of the box
+
+This is the same OAuth pattern from Lesson 4 — `@auth.authenticate` calls the Supabase API on every request to confirm the token is valid. The key benefit: **revocation works**. Disabling a Supabase account or revoking a session takes effect on the next request.
+
+`@auth.on` and `@auth.on.store()` are unchanged.
+
+<div class="sd-wrap" id="sd-supabase-auth"></div>
+
+### `auth_supabase.py`
+
+```python {3,19-36,43-51,57-59}
+import os
+
+import httpx
+import jwt
+from langgraph_sdk import Auth
+
+auth = Auth()
+
+
+@auth.authenticate
+async def authenticate(authorization: str | None) -> dict:
+    """Validate token. Admin tokens verified locally; regular users validated via Supabase API."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise Auth.exceptions.HTTPException(status_code=401, detail="Not authenticated")
+    token = authorization[7:]
+
+    # Admin/service tokens are signed with JWT_SECRET — verify locally, no network call.
+    # Non-admin locally-signed tokens and all Supabase tokens fall through to the API.
+    admin_secret = os.environ.get("JWT_SECRET")
+    if admin_secret:
+        try:
+            payload = jwt.decode(
+                token,
+                admin_secret,
+                algorithms=["HS256"],
+                options={"verify_aud": False},
+            )
+            if payload.get("role") == "admin":
+                username = payload["sub"]
+                namespace = payload.get("namespace", username)
+                return {"identity": username, "permissions": ["admin", "user"], "namespace": namespace}
+        except jwt.ExpiredSignatureError:
+            raise Auth.exceptions.HTTPException(status_code=401, detail="Token expired")
+        except jwt.InvalidTokenError:
+            pass  # Not a locally-signed token — try Supabase API
+
+    # Regular users — validate via Supabase API.
+    # This call confirms the token is still valid (handles revocation, account disabling,
+    # and works across any Supabase-supported OAuth provider).
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{os.environ['SUPABASE_URL']}/auth/v1/user",
+                headers={
+                    "Authorization": authorization,
+                    "apiKey": os.environ["SUPABASE_ANON_KEY"],
+                },
+            )
+            response.raise_for_status()
+            user = response.json()
+    except httpx.HTTPStatusError:
+        raise Auth.exceptions.HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        raise Auth.exceptions.HTTPException(status_code=401, detail=str(e))
+
+    username = user.get("email") or user["id"]
+    namespace = (user.get("user_metadata") or {}).get("namespace") or username
+    return {"identity": username, "permissions": ["user"], "namespace": namespace}
+
+
+@auth.on
+async def on_resource(ctx: Auth.types.AuthContext, value: dict):
+    """Stamp owner on creation; filter by owner on reads. Admins bypass filtering."""
+    if "admin" in ctx.permissions:
+        return  # admins see all resources
+
+    filters = {"owner": ctx.user.identity}
+
+    is_write = ctx.action in ("create", "update", "delete")
+    if is_write:
+        metadata = value.setdefault("metadata", {})
+        metadata.update(filters)
+
+    return filters
+
+
+@auth.on.store()
+async def on_store(ctx: Auth.types.AuthContext, value: dict):
+    """Restrict store access to the user's own namespace. Admins bypass."""
+    if "admin" in ctx.permissions:
+        return
+
+    namespace = tuple(value.get("namespace") or ())
+    if not namespace or namespace[0] != ctx.user.namespace:
+        raise Auth.exceptions.HTTPException(status_code=403, detail="Not authorized")
+```
+
+**Admin — local verification** — the admin account bypasses Supabase and logs in via local bcrypt. Its JWT is signed with `JWT_SECRET`. `@auth.authenticate` detects admin tokens by checking `role == "admin"` in the payload and verifies them locally without a network call. If verification fails (not a locally-signed token), it falls through to the Supabase API call.
+
+**Supabase API call** — `GET /auth/v1/user` with the user's Bearer token and `SUPABASE_ANON_KEY` confirms the token is still valid and returns the user's profile. This is the network round-trip that makes revocation possible — the same call you wrote in Lesson 4.
+
+**`user_metadata.namespace`** — `namespace` is not in a standard Supabase token. It is stored in Supabase user metadata at registration and returned as `user_metadata.namespace` in the user profile response. `app.py` passes `{"data": {"namespace": first_last}}` when calling Supabase's signup endpoint.
+
+---
+
+## Demo: Supabase Auth
+
+### Setup
+
+**1.** Create a Supabase project. From **Settings → API**, collect three values:
+- **Project URL** → `SUPABASE_URL`
+- **`anon` public key** → `SUPABASE_ANON_KEY`
+- **JWT secret** (under JWT Settings) → `SUPABASE_JWT_SECRET`
+
+**2.** In Supabase, go to **Authentication → Providers → Email** and turn off **Confirm email**. This allows accounts to log in immediately without a real inbox.
+
+**3.** Update your `.env`:
+
+```
+SUPABASE_OAUTH=true
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_ANON_KEY=<anon key>
+SUPABASE_JWT_SECRET=<jwt secret>
+```
+
+**4.** Update `langgraph.json`:
+
+```json {9-11}
+{
+  "dependencies": ["."],
+  "graphs": {
+    "tutor": "./agent/agent.py:graph"
+  },
+  "http": {
+    "app": "./ui/app.py:app"
+  },
+  "auth": {
+    "path": "./agent/auth_supabase.py:auth"
+  },
+  "env": ".env"
+}
+```
+
+**5.** Redeploy from your tutor directory:
+
+```bash
+cd python/lang_chat
+uv run langgraph deploy
+```
+
+### Walkthrough
+
+The demo is identical to the local version with one difference: **use an email address when registering** — Supabase requires email format. The register form label switches to "email" automatically when `SUPABASE_OAUTH=true` is active.
+
+Admin login bypasses Supabase and uses local bcrypt, exactly as before.
+
+<script>
+buildDiagram({
+    id: 'sd-jwt-basic',
+    participants: ['Client UI', 'Server'],
+    cx: [250, 750],
+    bw: 180, bh: 40, tby: 10, bby: 415, vw: 1000, vh: 465,
+    buildSteps: function(a) {
+      return [
+        labelBox(750, 75, 240, ['1. Admin creates JWT_SECRET', '(one-time server setup)']),
+        labelBox(250, 135, 220, ['2. User creates account']) +
+        labelBox(750, 135, 220, ['credentials stored on server']),
+        solidArrow(250, 750, 195, '3. login (username + password)', 500, a),
+        labelBox(750, 215, 240, ['4. generate JWT', 'signed with JWT_SECRET']),
+        dashedArrow(750, 250, 278, '5. JWT returned', 500, a),
+        solidArrow(250, 750, 318, '6. request + Bearer JWT', 500, a),
+        labelBox(750, 338, 240, ['7. verify JWT signature', 'using JWT_SECRET']),
+      ];
+    },
+    steps: [
+      { tag: 'Step 1 of 7', caption: 'An administrator generates a JWT_SECRET — a random string used to sign and verify tokens. This is a one-time setup step. The secret stays on the server and is never shared with clients.' },
+      { tag: 'Step 2 of 7', caption: 'A user creates an account. Their credentials (username and hashed password) are stored on the server.' },
+      { tag: 'Step 3 of 7', caption: 'The user submits their username and password to log in.' },
+      { tag: 'Step 4 of 7', caption: 'The server verifies the password, then generates a JWT containing the user identity and role, signed with JWT_SECRET.' },
+      { tag: 'Step 5 of 7', caption: 'The signed JWT is returned to the client. The client stores it and attaches it to every future request.' },
+      { tag: 'Step 6 of 7', caption: 'On subsequent requests, the client includes the JWT as a Bearer token in the Authorization header.' },
+      { tag: 'Step 7 of 7', caption: 'The server verifies the JWT signature using JWT_SECRET. No database lookup needed — the signature proves the token was issued by this server and has not been tampered with.' },
+    ]
+});
+
+buildDiagram({
+    id: 'sd-supabase-auth',
+    participants: ['UI Client', 'UI App', 'Supabase', 'Agent &amp; Store'],
+    cx: [80, 340, 620, 880],
+    bw: 120, bh: 40, tby: 10, bby: 600, vw: 1000, vh: 650,
+    buildSteps: function(a) {
+      return [
+        solidArrow(80,  340,  70, '1. POST /auth/login',           210, a),
+        solidArrow(340, 620, 115, '2. exchange credentials',        480, a),
+        dashedArrow(620, 340, 160, '3. Supabase JWT',               480, a),
+        solidArrow(340, 880, 205, '4. Store lookup (service token)', 610, a) +
+        labelBox(880, 222, 190, ['@auth.authenticate', 'local verify — admin']),
+        dashedArrow(880, 340, 280, '5. sessions returned',          610, a),
+        dashedArrow(340,  80, 315, '6. JWT + sessions',             210, a),
+        solidArrow( 80, 340, 375, '7. POST /chat + Bearer JWT',     210, a),
+        solidArrow(340, 880, 415, '8. forward request + JWT',       610, a),
+        solidArrow(880, 620, 455, '9. GET /auth/v1/user',           750, a),
+        dashedArrow(620, 880, 495, '10. user confirmed',            750, a) +
+        labelBox(880, 512, 190, ['@auth.on fires']),
+        dashedArrow(880,  80, 575, '11. response',                  480, a),
+      ];
+    },
+    steps: [
+      { tag: 'Step 1 of 11', caption: 'The student submits credentials to app.py. Like the local flow, this is a custom route — @auth.authenticate does not fire.' },
+      { tag: 'Step 2 of 11', caption: 'app.py forwards the credentials directly to Supabase Auth. Passwords are never stored or verified locally.' },
+      { tag: 'Step 3 of 11', caption: 'Supabase validates the credentials and issues a signed JWT. The token contains the user\'s email, their namespace (stored in user_metadata at registration), and role: "authenticated". This token is issued by Supabase — app.py does not create it.' },
+      { tag: 'Step 4 of 11', caption: 'app.py mints a short-lived service token — an admin JWT signed locally with JWT_SECRET — and uses it to retrieve sessions from the Store. @auth.authenticate decodes this token locally (no Supabase call): it sees role: "admin" and returns admin identity. @auth.on bypasses all filtering.' },
+      { tag: 'Step 5 of 11', caption: 'The Store returns the thread and assistant IDs for each lesson.' },
+      { tag: 'Step 6 of 11', caption: 'app.py returns the Supabase JWT and sessions to the browser. From here on the browser attaches the Supabase JWT — not a locally-issued one — to every request.' },
+      { tag: 'Step 7 of 11', caption: 'On every subsequent request the browser includes the Supabase JWT as a Bearer token.' },
+      { tag: 'Step 8 of 11', caption: 'app.py validates the JWT for its own FastAPI dependencies: admin tokens are verified with JWT_SECRET; Supabase user tokens are decoded without local signature verification (expiry is still checked). The real verification for user tokens happens in @auth.authenticate on the next step. app.py then forwards the request and JWT to the LangGraph agent.' },
+      { tag: 'Step 9 of 11', caption: '@auth.authenticate fires. Unlike the local pattern, it does not just verify the signature — it calls Supabase to confirm the token is still valid. This is the core OAuth benefit: revocation works. Disabling a Supabase account or revoking a session takes effect on the very next request.' },
+      { tag: 'Step 10 of 11', caption: 'Supabase confirms the token is valid and returns the user\'s identity. @auth.on fires next — regular students are filtered to their own namespace; admins bypass.' },
+      { tag: 'Step 11 of 11', caption: 'The agent processes the request under the correct identity and access scope and returns the response.' },
+    ]
+});
+
+buildDiagram({
+    id: 'sd-tutor-auth',
+    participants: ['UI Client', 'UI App', 'Agent &amp; Store'],
+    cx: [130, 500, 870],
+    bw: 150, bh: 40, tby: 10, bby: 540, vw: 1000, vh: 590,
+    staticSVG: (function() {
+      var ly1 = 50, ly2 = 540;
+      function p(cx, lbl) {
+        var x = cx - 75;
+        return '<rect x="' + x + '" y="10" width="150" height="40" rx="4" fill="#161F34" stroke="#2F4B68" stroke-width="1.5"/>' +
+               '<text x="' + cx + '" y="35" text-anchor="middle" fill="#E5F4FF" font-size="13" font-weight="500">' + lbl + '</text>' +
+               '<line x1="' + cx + '" y1="' + ly1 + '" x2="' + cx + '" y2="' + ly2 + '" stroke="#40668D" stroke-width="1.5" stroke-dasharray="5,5"/>' +
+               '<rect x="' + x + '" y="' + ly2 + '" width="150" height="40" rx="4" fill="#161F34" stroke="#2F4B68" stroke-width="1.5"/>' +
+               '<text x="' + cx + '" y="' + (ly2 + 25) + '" text-anchor="middle" fill="#E5F4FF" font-size="13" font-weight="500">' + lbl + '</text>';
+      }
+      var ghost =
+        '<rect x="245" y="10" width="150" height="40" rx="4" fill="none" stroke="#2F4B68" stroke-width="1" stroke-dasharray="4,4"/>' +
+        '<text x="320" y="35" text-anchor="middle" fill="#40668D" font-size="11" font-style="italic">Auth Layer</text>' +
+        '<line x1="320" y1="' + ly1 + '" x2="320" y2="' + ly2 + '" stroke="#2F4B68" stroke-width="1" stroke-dasharray="3,10"/>' +
+        '<rect x="245" y="' + ly2 + '" width="150" height="40" rx="4" fill="none" stroke="#2F4B68" stroke-width="1" stroke-dasharray="4,4"/>' +
+        '<text x="320" y="' + (ly2 + 25) + '" text-anchor="middle" fill="#40668D" font-size="11" font-style="italic">Auth Layer</text>';
+      return p(130, 'UI Client') + ghost + p(500, 'UI App') + p(870, 'Agent &amp; Store');
+    })(),
+    buildSteps: function(a) {
+      return [
+        solidArrow(130, 500,   75, '1. POST /auth/login', 315, a),
+        solidArrow(500, 870,  135, '2. Store lookup (service token)', 685, a) +
+        labelBox(870, 152, 260, ['@auth.authenticate fires', '@auth.on — admin bypass']),
+        dashedArrow(870, 500, 215, '3. profile returned', 685, a),
+        dashedArrow(500, 130, 270, '4. JWT issued', 315, a),
+        solidArrow(130, 500,  320, '5. POST /chat + Bearer JWT', 315, a),
+        solidArrow(500, 870,  370, '6. forward request + JWT', 685, a),
+        labelBox(870, 387, 260, ['7. @auth.authenticate fires', '8. @auth.on fires']),
+        dashedArrow(870, 130, 480, '8. response returned', 500, a),
+      ];
+    },
+    steps: [
+      { tag: 'Step 1 of 8', caption: 'The student submits their username and password. This is a custom app.py route — @auth.authenticate does not fire because custom routes are public by default.' },
+      { tag: 'Step 2 of 8', caption: 'app.py mints a short-lived service token with admin role and uses it to look up the student profile. @auth.authenticate validates the service token; @auth.on sees admin permissions and bypasses all filtering.' },
+      { tag: 'Step 3 of 8', caption: 'The Store returns the student profile, including the bcrypt password hash.' },
+      { tag: 'Step 4 of 8', caption: 'app.py verifies the bcrypt hash. On success it issues a 24-hour JWT signed with JWT_SECRET, containing the student identity, namespace, and role.' },
+      { tag: 'Step 5 of 8', caption: 'For every subsequent request, the browser includes the JWT as a Bearer token.' },
+      { tag: 'Step 6 of 8', caption: 'app.py validates the JWT itself (FastAPI dependency), then forwards the request and token to the LangGraph agent.' },
+      { tag: 'Step 7 of 8', caption: '@auth.authenticate fires and decodes the JWT, extracting identity and permissions. @auth.on fires next — regular students are filtered to their own threads; admins bypass filtering entirely.' },
+      { tag: 'Step 8 of 8', caption: 'The agent processes the request with the correct access scope and returns the response.' },
+    ]
+});
+</script>
