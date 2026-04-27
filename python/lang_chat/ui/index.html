@@ -335,7 +335,7 @@
     <!-- Login form -->
     <div id="loginSection">
       <div class="student-field">
-        <label>username</label>
+        <label class="username-label">username</label>
         <input type="text" id="loginUsername" placeholder="your username" autocomplete="username">
       </div>
       <div class="student-field">
@@ -361,7 +361,7 @@
         </div>
       </div>
       <div class="student-field">
-        <label>username</label>
+        <label class="username-label">username</label>
         <input type="text" id="regUsername" placeholder="janedoe" autocomplete="username">
       </div>
       <div class="student-field">
@@ -434,12 +434,18 @@
   // Per-lesson streaming state
   const lessonState = {};   // lesson_id → {isStreaming}
 
-  function loadState() {
+  async function loadState() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         state = { ...state, ...JSON.parse(saved) };
-        if (state.token) applyLoggedInState();
+        if (state.token) {
+          const res = await fetch('/auth/validate', {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+          }).catch(() => null);
+          if (!res || res.status === 401) { logout(); return; }
+          applyLoggedInState();
+        }
       }
     } catch (e) { /* ignore */ }
   }
@@ -692,6 +698,7 @@
         body: JSON.stringify({ goals, preferences }),
       });
 
+      if (res.status === 401) { logout(); return; }
       if (!res.ok) throw new Error(await res.text());
       statusEl.textContent = 'profile updated';
       statusEl.className = 'status-msg success';
@@ -709,12 +716,20 @@
     const el = document.getElementById('resourcesContent');
     el.innerHTML = '<p style="font-size:11px; color:#40668D">loading...</p>';
 
+    const authHeader = { 'Authorization': `Bearer ${state.token}` };
+
     try {
-      const res = await fetch('/resources', {
-        headers: { 'Authorization': `Bearer ${state.token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const { assistants, threads } = await res.json();
+      const [resRes, storeRes] = await Promise.all([
+        fetch('/resources', { headers: authHeader }),
+        fetch('/store', { headers: authHeader }),
+      ]);
+
+      if (resRes.status === 401 || storeRes.status === 401) { logout(); return; }
+      if (!resRes.ok) throw new Error(await resRes.text());
+      if (!storeRes.ok) throw new Error(await storeRes.text());
+
+      const { assistants, threads } = await resRes.json();
+      const { items } = await storeRes.json();
 
       const assistantRows = assistants.map(a => `
         <tr>
@@ -730,6 +745,14 @@
           <td>${t.created_at ? new Date(t.created_at).toLocaleString() : '—'}</td>
         </tr>`).join('');
 
+      const storeRows = items.map(item => `
+        <tr>
+          <td>${item.namespace.join(' / ')}</td>
+          <td>${item.key}</td>
+          <td>${item.updated_at ? new Date(item.updated_at).toLocaleString() : '—'}</td>
+          <td><pre style="margin:0;white-space:pre-wrap;word-break:break-all">${JSON.stringify(item.value, null, 2)}</pre></td>
+        </tr>`).join('');
+
       el.innerHTML = `
         <p style="font-size:11px; color:#7FC8FF; margin-bottom:16px">assistants (${assistants.length})</p>
         <table class="resources-table" style="margin-bottom:24px">
@@ -737,9 +760,14 @@
           <tbody>${assistantRows || '<tr><td colspan="3" style="color:#40668D">none</td></tr>'}</tbody>
         </table>
         <p style="font-size:11px; color:#7FC8FF; margin-bottom:16px">threads (${threads.length})</p>
-        <table class="resources-table">
+        <table class="resources-table" style="margin-bottom:24px">
           <thead><tr><th>thread id</th><th>status</th><th>created</th></tr></thead>
           <tbody>${threadRows || '<tr><td colspan="3" style="color:#40668D">none</td></tr>'}</tbody>
+        </table>
+        <p style="font-size:11px; color:#7FC8FF; margin-bottom:16px">store (${items.length})</p>
+        <table class="resources-table">
+          <thead><tr><th>namespace</th><th>key</th><th>updated</th><th>value</th></tr></thead>
+          <tbody>${storeRows || '<tr><td colspan="4" style="color:#40668D">none</td></tr>'}</tbody>
         </table>`;
 
     } catch (err) {
@@ -808,6 +836,7 @@
         }),
       });
 
+      if (res.status === 401) { logout(); return; }
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
 
       const reader = res.body.getReader();
@@ -914,7 +943,23 @@
   // Init
   // ---------------------------------------------------------------------------
 
+  async function applyAuthMode() {
+    try {
+      const res = await fetch('/auth/mode');
+      const { mode } = await res.json();
+      if (mode === 'supabase') {
+        document.querySelector('label[for="loginUsername"]') &&
+          (document.querySelector('label[for="loginUsername"]').textContent = 'email');
+        document.querySelectorAll('#loginUsername, #regUsername').forEach(el => {
+          el.placeholder = el.id === 'loginUsername' ? 'your email' : 'jane@example.com';
+        });
+        document.querySelectorAll('.username-label').forEach(el => el.textContent = 'email');
+      }
+    } catch (e) { /* ignore — labels stay as username */ }
+  }
+
   loadState();
+  applyAuthMode();
   buildLessonTabs();
 </script>
 </body>
