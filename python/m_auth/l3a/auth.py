@@ -22,6 +22,7 @@ async def get_current_user(authorization: str | None) -> Auth.types.MinimalUserD
 @auth.on
 async def add_owner(ctx: Auth.types.AuthContext, value: dict):
     filters = {"owner": ctx.user.identity}
-    metadata = value.setdefault("metadata", {})
-    metadata.update(filters)  # updates value["metadata"]
+    if ctx.action in ("create", "update", "delete"):
+        metadata = value.setdefault("metadata", {})
+        metadata.update(filters)
     return filters

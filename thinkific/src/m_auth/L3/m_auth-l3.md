@@ -82,8 +82,9 @@ python/m_auth/
 @auth.on
 async def add_owner(ctx: Auth.types.AuthContext, value: dict):
     filters = {"owner": ctx.user.identity}
-    metadata = value.setdefault("metadata", {})
-    metadata.update(filters)  # updates value["metadata"]
+    if ctx.action in ("create", "update", "delete"):
+        metadata = value.setdefault("metadata", {})
+        metadata.update(filters)
     return filters
 ```
 
