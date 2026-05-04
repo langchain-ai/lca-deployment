@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deep Tutor</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #030710;
+      color: #F2FAFF;
+      font-family: 'IBM Plex Mono', monospace;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 14px;
+      font-weight: 300;
+      color: #7FC8FF;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #161F34;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 8px 16px;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      background: none;
+      color: #40668D;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .tab.active {
+      color: #7FC8FF;
+      border-color: #2F4B68;
+      background: #0D1322;
+      margin-bottom: -1px;
+    }
+
+    .tab.disabled {
+      color: #1E3048;
+      cursor: not-allowed;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .layout {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .diagram-wrap { flex: 0 0 680px; max-width: 100%; }
+    svg { width: 100%; }
+    .clickable { cursor: pointer; }
+    .clickable:hover > rect { opacity: 0.75; transition: opacity 0.15s; }
+
+    .chat-panel {
+      flex: 1;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .response-panel {
+      background: #0D1322;
+      border: 1px solid #2F4B68;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .response-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #161F34;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .response-title { font-size: 11px; font-weight: 500; color: #7FC8FF; }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #2F4B68;
+      transition: background 0.3s;
+    }
+    .status-dot.active { background: #006DDD; animation: pulse 1s ease-in-out infinite; }
+    .status-dot.done { background: #7FC8FF; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .question-label {
+      padding: 10px 16px 0;
+      font-size: 10px;
+      color: #40668D;
+      min-height: 28px;
+    }
+
+    .response-body {
+      padding: 12px 16px 16px;
+      font-size: 12px;
+      font-weight: 300;
+      color: #F2FAFF;
+      line-height: 1.7;
+      min-height: 200px;
+      white-space: pre-wrap;
+      overflow-y: auto;
+      max-height: 420px;
+    }
+    .response-body.placeholder { color: #2F4B68; }
+    .error-msg { color: #FBB0A5; font-size: 11px; }
+
+    .thread-info {
+      padding: 8px 16px;
+      font-size: 10px;
+      color: #2F4B68;
+      border-top: 1px solid #161F34;
+    }
+
+    .input-row { display: flex; gap: 8px; }
+
+    .chat-input {
+      flex: 1;
+      background: #0D1322;
+      border: 1px solid #2F4B68;
+      border-radius: 8px;
+      color: #F2FAFF;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      resize: none;
+      min-height: 44px;
+      max-height: 120px;
+    }
+    .chat-input:focus { border-color: #7FC8FF; }
+    .chat-input::placeholder { color: #2F4B68; }
+
+    .send-btn {
+      background: #006DDD;
+      border: none;
+      border-radius: 8px;
+      color: #F2FAFF;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      align-self: flex-end;
+    }
+    .send-btn:hover { background: #0085FF; }
+    .send-btn:disabled { background: #161F34; color: #2F4B68; cursor: not-allowed; }
+
+    .setup-panel {
+      background: #0D1322;
+      border: 1px solid #2F4B68;
+      border-radius: 10px;
+      padding: 24px;
+      max-width: 400px;
+    }
+
+    .setup-panel h2 {
+      font-size: 12px;
+      font-weight: 500;
+      color: #7FC8FF;
+      margin-bottom: 20px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 16px;
+    }
+
+    .field label { font-size: 10px; color: #40668D; }
+
+    .field input {
+      background: #161F34;
+      border: 1px solid #2F4B68;
+      border-radius: 6px;
+      color: #F2FAFF;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field input:focus { border-color: #7FC8FF; }
+    .field input::placeholder { color: #2F4B68; }
+
+    .field textarea {
+      background: #161F34;
+      border: 1px solid #2F4B68;
+      border-radius: 6px;
+      color: #F2FAFF;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color 0.2s;
+      resize: vertical;
+    }
+    .field textarea:focus { border-color: #7FC8FF; }
+    .field textarea::placeholder { color: #2F4B68; }
+
+    .name-row { display: flex; gap: 12px; }
+    .name-row .field { flex: 1; }
+
+    .action-btn {
+      background: #006DDD;
+      border: none;
+      border-radius: 8px;
+      color: #F2FAFF;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 8px;
+    }
+    .action-btn:hover { background: #0085FF; }
+    .action-btn:disabled { background: #161F34; color: #2F4B68; cursor: not-allowed; }
+    .action-btn.secondary { background: #161F34; color: #40668D; }
+    .action-btn.secondary:hover { background: #1E3048; color: #7FC8FF; }
+
+    .status-msg {
+      font-size: 10px;
+      color: #40668D;
+      margin-top: 12px;
+      min-height: 16px;
+    }
+    .status-msg.error { color: #FBB0A5; }
+    .status-msg.success { color: #7FC8FF; }
+
+    .resources-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      margin-top: 12px;
+    }
+    .resources-table th {
+      text-align: left;
+      color: #40668D;
+      padding: 6px 10px;
+      border-bottom: 1px solid #161F34;
+    }
+    .resources-table td {
+      color: #F2FAFF;
+      padding: 6px 10px;
+      border-bottom: 1px solid #0D1322;
+      word-break: break-all;
+    }
+    .resources-table tr:hover td { background: #0D1322; }
+  </style>
+</head>
+<body>
+
+<h1>deep tutor</h1>
+
+<div class="tabs" id="tabBar">
+  <button class="tab active" data-tab="setup" onclick="switchTab('setup')">setup</button>
+  <button class="tab" data-tab="resources" onclick="switchTab('resources')">resources</button>
+</div>
+
+<!-- Setup tab -->
+<div id="tab-setup" class="tab-content active">
+  <div class="setup-panel">
+    <h2 id="setupHeading">get started</h2>
+
+    <div id="startSection">
+      <div class="name-row">
+        <div class="field">
+          <label>first name</label>
+          <input type="text" id="firstName" placeholder="Jane" autocomplete="given-name">
+        </div>
+        <div class="field">
+          <label>last name</label>
+          <input type="text" id="lastName" placeholder="Doe" autocomplete="family-name">
+        </div>
+      </div>
+      <div class="field">
+        <label>email</label>
+        <input type="email" id="studentEmail" placeholder="jane@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>course goals</label>
+        <textarea id="studentGoals" rows="3" placeholder="what do you want to get out of this course?"></textarea>
+      </div>
+      <button class="action-btn" onclick="start()">start</button>
+      <div class="status-msg" id="startStatus"></div>
+    </div>
+
+    <div id="activeSection" style="display:none">
+      <p style="font-size:11px; color:#40668D; margin-bottom:20px;">
+        learning as <span id="nameDisplay" style="color:#7FC8FF"></span>
+      </p>
+      <button class="action-btn secondary" onclick="restart()">restart</button>
+    </div>
+  </div>
+</div>
+
+<!-- Resources tab -->
+<div id="tab-resources" class="tab-content">
+  <div class="setup-panel" style="max-width:900px">
+    <h2>resources</h2>
+    <div id="resourcesContent">
+      <p style="font-size:11px; color:#40668D">start a session to see resources.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'deep_tutor:state';
+
+  let state = {
+    studentName: null,
+    email: null,
+    started: false,
+    sessions: [],
+  };
+
+  const moduleState = {};
+
+  function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+  function loadState() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        state = { ...state, ...JSON.parse(saved) };
+        if (state.started) applyStartedState();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tab management
+  // ---------------------------------------------------------------------------
+
+  let activeTab = 'setup';
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    const content = document.getElementById(`tab-${tabId}`);
+    if (content) content.classList.add('active');
+    document.querySelectorAll('.tab').forEach(el => {
+      if (el.dataset.tab === tabId) el.classList.add('active');
+    });
+    activeTab = tabId;
+    if (tabId === 'resources') renderResources();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Module tabs
+  // ---------------------------------------------------------------------------
+
+  async function buildModuleTabs() {
+    const res = await fetch('/modules');
+    const { modules } = await res.json();
+
+    const tabBar = document.getElementById('tabBar');
+    const body = document.body;
+
+    modules.forEach(mod => {
+      const btn = document.createElement('button');
+      btn.className = mod.active ? 'tab' : 'tab disabled';
+      btn.dataset.tab = mod.id;
+      btn.title = mod.active ? '' : 'coming soon';
+      btn.textContent = mod.active
+        ? `${mod.id} — ${mod.label}`
+        : mod.id;
+      if (mod.active) btn.onclick = () => switchTab(mod.id);
+      tabBar.appendChild(btn);
+
+      const content = document.createElement('div');
+      content.id = `tab-${mod.id}`;
+      content.className = 'tab-content';
+      content.innerHTML = buildModuleContent(mod);
+      body.appendChild(content);
+
+      moduleState[mod.id] = { isStreaming: false };
+    });
+  }
+
+  function buildModuleContent(mod) {
+    const session = state.sessions.find(s => s.module_id === mod.id) || {};
+    const threadId = session.thread_id || 'no thread';
+
+    if (mod.id === 'module-1') {
+      return `
+        <div class="layout">
+          <div class="diagram-wrap">${diagramSVG()}</div>
+          <div class="chat-panel">${chatPanelHTML(mod.id, threadId)}</div>
+        </div>`;
+    }
+    return `<div class="chat-panel" style="max-width:600px">${chatPanelHTML(mod.id, threadId)}</div>`;
+  }
+
+  function chatPanelHTML(moduleId, threadId) {
+    return `
+      <div class="response-panel">
+        <div class="response-header">
+          <span class="response-title">agent response</span>
+          <span class="status-dot" id="dot-${moduleId}"></span>
+        </div>
+        <div class="question-label" id="label-${moduleId}">click any box or type below to ask the tutor</div>
+        <div class="response-body placeholder" id="body-${moduleId}">responses will appear here...</div>
+        <div class="thread-info" id="thread-${moduleId}">thread: ${threadId}</div>
+      </div>
+      <div class="input-row">
+        <textarea class="chat-input" id="input-${moduleId}" placeholder="ask the tutor anything..." rows="1"
+          onkeydown="handleKey(event, '${moduleId}')"></textarea>
+        <button class="send-btn" id="send-${moduleId}" onclick="sendMessage('${moduleId}')">send</button>
+      </div>`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Start / restart
+  // ---------------------------------------------------------------------------
+
+  async function start() {
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const email = document.getElementById('studentEmail').value.trim();
+    const goals = document.getElementById('studentGoals').value.trim();
+    const statusEl = document.getElementById('startStatus');
+
+    if (!firstName || !lastName) {
+      statusEl.textContent = 'enter your first and last name';
+      statusEl.className = 'status-msg error';
+      return;
+    }
+    if (!email) {
+      statusEl.textContent = 'enter your email';
+      statusEl.className = 'status-msg error';
+      return;
+    }
+
+    statusEl.textContent = 'setting up your session...';
+    statusEl.className = 'status-msg';
+
+    try {
+      const res = await fetch('/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, email, goals }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const data = await res.json();
+      state.studentName = `${firstName} ${lastName}`;
+      state.email = email;
+      state.sessions = data.sessions;
+      state.started = true;
+      saveState();
+
+      applyStartedState();
+
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.className = 'status-msg error';
+    }
+  }
+
+  function applyStartedState() {
+    document.getElementById('startSection').style.display = 'none';
+    document.getElementById('activeSection').style.display = 'block';
+    document.getElementById('nameDisplay').textContent = state.studentName;
+
+    document.querySelectorAll('.tab:not([data-tab="setup"]):not([data-tab="resources"]), .tab-content:not(#tab-setup):not(#tab-resources)').forEach(el => el.remove());
+    buildModuleTabs();
+  }
+
+  function restart() {
+    state = { studentName: null, email: null, started: false, sessions: [] };
+    saveState();
+    localStorage.removeItem(STORAGE_KEY);
+
+    document.getElementById('startSection').style.display = 'block';
+    document.getElementById('activeSection').style.display = 'none';
+    document.getElementById('firstName').value = '';
+    document.getElementById('lastName').value = '';
+    document.getElementById('studentEmail').value = '';
+    document.getElementById('studentGoals').value = '';
+    document.getElementById('startStatus').textContent = '';
+
+    document.querySelectorAll('.tab:not([data-tab="setup"]):not([data-tab="resources"]), .tab-content:not(#tab-setup):not(#tab-resources)').forEach(el => el.remove());
+
+    switchTab('setup');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Resources
+  // ---------------------------------------------------------------------------
+
+  async function renderResources() {
+    const el = document.getElementById('resourcesContent');
+    el.innerHTML = '<p style="font-size:11px; color:#40668D">loading...</p>';
+
+    try {
+      const res = await fetch('/resources');
+      if (!res.ok) throw new Error(await res.text());
+
+      const { assistants, threads } = await res.json();
+
+      const assistantRows = assistants.map(a => `
+        <tr>
+          <td>${a.name || '—'}</td>
+          <td>${a.assistant_id}</td>
+          <td>${a.graph_id}</td>
+        </tr>`).join('');
+
+      const threadRows = threads.map(t => `
+        <tr>
+          <td>${t.thread_id}</td>
+          <td>${t.status || '—'}</td>
+          <td>${t.created_at ? new Date(t.created_at).toLocaleString() : '—'}</td>
+        </tr>`).join('');
+
+      el.innerHTML = `
+        <p style="font-size:11px; color:#7FC8FF; margin-bottom:16px">assistants (${assistants.length})</p>
+        <table class="resources-table" style="margin-bottom:24px">
+          <thead><tr><th>name</th><th>assistant id</th><th>graph</th></tr></thead>
+          <tbody>${assistantRows || '<tr><td colspan="3" style="color:#40668D">none</td></tr>'}</tbody>
+        </table>
+        <p style="font-size:11px; color:#7FC8FF; margin-bottom:16px">threads (${threads.length})</p>
+        <table class="resources-table">
+          <thead><tr><th>thread id</th><th>status</th><th>created</th></tr></thead>
+          <tbody>${threadRows || '<tr><td colspan="3" style="color:#40668D">none</td></tr>'}</tbody>
+        </table>`;
+
+    } catch (err) {
+      el.innerHTML = `<p style="font-size:11px; color:#FBB0A5">${err.message}</p>`;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Chat
+  // ---------------------------------------------------------------------------
+
+  function ask(question) {
+    if (activeTab && activeTab !== 'setup' && activeTab !== 'resources') {
+      document.getElementById(`input-${activeTab}`).value = question;
+      sendMessage(activeTab);
+    }
+  }
+
+  function handleKey(event, moduleId) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage(moduleId);
+    }
+  }
+
+  async function sendMessage(moduleId) {
+    if (moduleState[moduleId]?.isStreaming) return;
+    if (!state.started) {
+      alert('enter your name and click start first');
+      switchTab('setup');
+      return;
+    }
+
+    const input = document.getElementById(`input-${moduleId}`);
+    const message = input.value.trim();
+    if (!message) return;
+
+    const session = state.sessions.find(s => s.module_id === moduleId);
+    if (!session) return;
+
+    input.value = '';
+    moduleState[moduleId].isStreaming = true;
+
+    const dot = document.getElementById(`dot-${moduleId}`);
+    const body = document.getElementById(`body-${moduleId}`);
+    const label = document.getElementById(`label-${moduleId}`);
+    const sendBtn = document.getElementById(`send-${moduleId}`);
+
+    label.textContent = message;
+    body.textContent = '';
+    body.classList.remove('placeholder');
+    dot.className = 'status-dot active';
+    sendBtn.disabled = true;
+
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          assistant_id: session.assistant_id,
+          thread_id: session.thread_id,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        body.textContent += decoder.decode(value, { stream: true });
+        body.scrollTop = body.scrollHeight;
+      }
+
+      dot.className = 'status-dot done';
+
+    } catch (err) {
+      body.innerHTML = `<span class="error-msg">${err.message}</span>`;
+      dot.className = 'status-dot';
+    } finally {
+      moduleState[moduleId].isStreaming = false;
+      sendBtn.disabled = false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // SVG diagram (module-1 only)
+  // ---------------------------------------------------------------------------
+
+  function diagramSVG() {
+    return `<svg viewBox="0 0 680 415" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <rect width="680" height="415" fill="#030710" rx="12"/>
+      <g class="clickable" onclick="ask('What is the Agent Server in LangGraph Deployment? What does it include and how does it work?')">
+        <rect x="5" y="5" width="390" height="404" rx="16" fill="none" stroke="#2F4B68" stroke-width="1.2" stroke-dasharray="7 3"/>
+        <text x="200" y="22" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#7FC8FF">agent server</text>
+        <text x="200" y="37" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#40668D">deployment instance</text>
+      </g>
+      <g class="clickable" onclick="ask('What is the container layer in LangGraph Deployment? What does always-on compute mean and how does it differ from serverless?')">
+        <rect x="18" y="46" width="364" height="356" rx="14" fill="#0D1322" stroke="#7FC8FF" stroke-width="0.6"/>
+        <text x="200" y="64" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">container</text>
+        <text x="200" y="79" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#7FC8FF">always-on compute</text>
+      </g>
+      <g class="clickable" onclick="ask('What does the worker process do in LangGraph Deployment? How does it pick up runs from the queue?')">
+        <rect x="32" y="88" width="336" height="306" rx="12" fill="#161F34" stroke="#40668D" stroke-width="0.6"/>
+        <text x="200" y="106" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">worker process</text>
+        <text x="200" y="121" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#99D3FF">picks up runs from queue</text>
+      </g>
+      <g class="clickable" onclick="ask('What does the LangGraph runtime do? What is its role in graph execution?')">
+        <rect x="46" y="128" width="308" height="258" rx="10" fill="#030710" stroke="#006DDD" stroke-width="0.6"/>
+        <text x="200" y="146" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">langgraph runtime</text>
+        <text x="200" y="161" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#7FC8FF">graph execution engine</text>
+      </g>
+      <g class="clickable" onclick="ask('What is the agent graph in LangGraph? What are nodes, edges, and state?')">
+        <rect x="60" y="170" width="280" height="207" rx="8" fill="#0D1322" stroke="#2F4B68" stroke-width="0.6"/>
+        <text x="200" y="188" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">agent graph</text>
+        <text x="200" y="203" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#99D3FF">your business logic</text>
+      </g>
+      <g class="clickable" onclick="ask('How does a LangGraph agent call an LLM? What happens inside a call_llm node?')">
+        <rect x="72" y="218" width="76" height="30" rx="5" fill="#161F34" stroke="#40668D" stroke-width="0.6"/>
+        <text x="110" y="233" text-anchor="middle" dominant-baseline="central" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="400" fill="#F2FAFF">call llm</text>
+      </g>
+      <g class="clickable" onclick="ask('How does a LangGraph agent call a tool? What is a tool node and how does tool calling work?')">
+        <rect x="161" y="218" width="76" height="30" rx="5" fill="#161F34" stroke="#40668D" stroke-width="0.6"/>
+        <text x="199" y="233" text-anchor="middle" dominant-baseline="central" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="400" fill="#F2FAFF">call tool</text>
+      </g>
+      <g class="clickable" onclick="ask('How does state get updated in a LangGraph agent? What are reducers and how does state flow through the graph?')">
+        <rect x="250" y="218" width="82" height="30" rx="5" fill="#161F34" stroke="#40668D" stroke-width="0.6"/>
+        <text x="291" y="233" text-anchor="middle" dominant-baseline="central" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="400" fill="#F2FAFF">update state</text>
+      </g>
+      <line x1="148" y1="233" x2="161" y2="233" stroke="#40668D" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="237" y1="233" x2="250" y2="233" stroke="#40668D" stroke-width="1.2" marker-end="url(#arr)"/>
+      <text x="200" y="267" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#40668D">edge routing · reducers · state</text>
+      <text x="200" y="284" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#2F4B68">compiled once · reused per run</text>
+      <g class="clickable" onclick="ask('What does Postgres store in LangGraph Deployment? What is the difference between the checkpointer and the store?')">
+        <rect x="416" y="46" width="258" height="225" rx="14" fill="#0D1322" stroke="#7FC8FF" stroke-width="0.6"/>
+        <text x="545" y="66" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">postgres</text>
+        <text x="545" y="81" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#7FC8FF">persistence · external</text>
+      </g>
+      <g class="clickable" onclick="ask('How does the LangGraph checkpointer work? What does it save and when does it save it?')">
+        <rect x="427" y="98" width="236" height="54" rx="8" fill="#161F34" stroke="#006DDD" stroke-width="0.6"/>
+        <text x="545" y="120" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">checkpointer</text>
+        <text x="545" y="136" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#99D3FF">graph state · per node</text>
+      </g>
+      <g class="clickable" onclick="ask('How does the LangGraph store work for long-term memory? How is it different from the checkpointer?')">
+        <rect x="427" y="163" width="236" height="54" rx="8" fill="#161F34" stroke="#40668D" stroke-width="0.6"/>
+        <text x="545" y="185" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">store</text>
+        <text x="545" y="201" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#99D3FF">long-term memory</text>
+      </g>
+      <g class="clickable" onclick="ask('What does Redis do in LangGraph Deployment? How does it handle the doorbell pattern and streaming?')">
+        <rect x="416" y="293" width="258" height="68" rx="14" fill="#0D1322" stroke="#40668D" stroke-width="0.6"/>
+        <text x="545" y="321" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">redis</text>
+        <text x="545" y="337" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#7FC8FF">doorbell · streaming</text>
+      </g>
+      <line x1="354" y1="152" x2="427" y2="125" stroke="#006DDD" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="340" y1="190" x2="427" y2="190" stroke="#7FC8FF" stroke-width="1.2" marker-end="url(#arr)"/>
+      <line x1="368" y1="327" x2="416" y2="327" stroke="#40668D" stroke-width="1.2" marker-end="url(#arr)"/>
+    </svg>`;
+  }
+
+  loadState();
+  buildModuleTabs();
+</script>
+</body>
+</html>
