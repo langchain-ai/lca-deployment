@@ -255,6 +255,9 @@
     .status-msg.error { color: #FBB0A5; }
     .status-msg.success { color: #7FC8FF; }
 
+    .auth-switch { font-size: 10px; color: #40668D; margin-top: 12px; }
+    .auth-switch .link { color: #7FC8FF; cursor: pointer; text-decoration: underline; }
+
     .resources-table {
       width: 100%;
       border-collapse: collapse;
@@ -290,7 +293,20 @@
   <div class="setup-panel">
     <h2 id="setupHeading">get started</h2>
 
-    <div id="startSection">
+    <!-- Login view (default) -->
+    <div id="loginView">
+      <div class="field">
+        <label>email</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <!-- TODO: password field — authentication handled in m_auth module -->
+      <button class="action-btn" onclick="doLogin()">log in</button>
+      <p class="auth-switch">new here? <span class="link" onclick="showRegister()">register</span></p>
+      <div class="status-msg" id="loginStatus"></div>
+    </div>
+
+    <!-- Register view -->
+    <div id="registerView" style="display:none">
       <div class="name-row">
         <div class="field">
           <label>first name</label>
@@ -303,21 +319,23 @@
       </div>
       <div class="field">
         <label>email</label>
-        <input type="email" id="studentEmail" placeholder="jane@example.com" autocomplete="email">
+        <input type="email" id="regEmail" placeholder="you@example.com" autocomplete="email">
       </div>
       <div class="field">
         <label>course goals</label>
         <textarea id="studentGoals" rows="3" placeholder="what do you want to get out of this course?"></textarea>
       </div>
-      <button class="action-btn" onclick="start()">start</button>
-      <div class="status-msg" id="startStatus"></div>
+      <!-- TODO: password field — authentication handled in m_auth module -->
+      <button class="action-btn" onclick="doRegister()">register</button>
+      <p class="auth-switch">already registered? <span class="link" onclick="showLogin()">log in</span></p>
+      <div class="status-msg" id="registerStatus"></div>
     </div>
 
     <div id="activeSection" style="display:none">
       <p style="font-size:11px; color:#40668D; margin-bottom:20px;">
         learning as <span id="nameDisplay" style="color:#7FC8FF"></span>
       </p>
-      <button class="action-btn secondary" onclick="restart()">restart</button>
+      <button class="action-btn secondary" onclick="logout()">log out</button>
     </div>
   </div>
 </div>
@@ -439,15 +457,68 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Start / restart
+  // Login / register / logout
   // ---------------------------------------------------------------------------
 
-  async function start() {
+  function showLogin() {
+    document.getElementById('loginView').style.display = 'block';
+    document.getElementById('registerView').style.display = 'none';
+    document.getElementById('setupHeading').textContent = 'log in';
+  }
+
+  function showRegister() {
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('registerView').style.display = 'block';
+    document.getElementById('setupHeading').textContent = 'register';
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const statusEl = document.getElementById('loginStatus');
+
+    if (!email) {
+      statusEl.textContent = 'enter your email';
+      statusEl.className = 'status-msg error';
+      return;
+    }
+
+    statusEl.textContent = 'logging in...';
+    statusEl.className = 'status-msg';
+
+    try {
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (res.status === 404) {
+        statusEl.textContent = 'no account found — register first';
+        statusEl.className = 'status-msg error';
+        return;
+      }
+      if (!res.ok) throw new Error(await res.text());
+
+      const data = await res.json();
+      state.studentName = `${data.profile.first_name} ${data.profile.last_name}`.trim();
+      state.email = email;
+      state.sessions = data.sessions;
+      state.started = true;
+      saveState();
+      applyStartedState();
+
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.className = 'status-msg error';
+    }
+  }
+
+  async function doRegister() {
     const firstName = document.getElementById('firstName').value.trim();
     const lastName = document.getElementById('lastName').value.trim();
-    const email = document.getElementById('studentEmail').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
     const goals = document.getElementById('studentGoals').value.trim();
-    const statusEl = document.getElementById('startStatus');
+    const statusEl = document.getElementById('registerStatus');
 
     if (!firstName || !lastName) {
       statusEl.textContent = 'enter your first and last name';
@@ -460,11 +531,11 @@
       return;
     }
 
-    statusEl.textContent = 'setting up your session...';
+    statusEl.textContent = 'creating your account...';
     statusEl.className = 'status-msg';
 
     try {
-      const res = await fetch('/start', {
+      const res = await fetch('/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ first_name: firstName, last_name: lastName, email, goals }),
@@ -473,12 +544,11 @@
       if (!res.ok) throw new Error(await res.text());
 
       const data = await res.json();
-      state.studentName = `${firstName} ${lastName}`;
+      state.studentName = `${firstName} ${lastName}`.trim();
       state.email = email;
       state.sessions = data.sessions;
       state.started = true;
       saveState();
-
       applyStartedState();
 
     } catch (err) {
@@ -488,29 +558,32 @@
   }
 
   function applyStartedState() {
-    document.getElementById('startSection').style.display = 'none';
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('registerView').style.display = 'none';
     document.getElementById('activeSection').style.display = 'block';
     document.getElementById('nameDisplay').textContent = state.studentName;
+    document.getElementById('setupHeading').textContent = 'account';
 
     document.querySelectorAll('.tab:not([data-tab="setup"]):not([data-tab="resources"]), .tab-content:not(#tab-setup):not(#tab-resources)').forEach(el => el.remove());
     buildModuleTabs();
   }
 
-  function restart() {
+  function logout() {
     state = { studentName: null, email: null, started: false, sessions: [] };
-    saveState();
     localStorage.removeItem(STORAGE_KEY);
 
-    document.getElementById('startSection').style.display = 'block';
-    document.getElementById('activeSection').style.display = 'none';
+    document.getElementById('loginEmail').value = '';
     document.getElementById('firstName').value = '';
     document.getElementById('lastName').value = '';
-    document.getElementById('studentEmail').value = '';
+    document.getElementById('regEmail').value = '';
     document.getElementById('studentGoals').value = '';
-    document.getElementById('startStatus').textContent = '';
+    document.getElementById('loginStatus').textContent = '';
+    document.getElementById('registerStatus').textContent = '';
+    document.getElementById('activeSection').style.display = 'none';
 
     document.querySelectorAll('.tab:not([data-tab="setup"]):not([data-tab="resources"]), .tab-content:not(#tab-setup):not(#tab-resources)').forEach(el => el.remove());
 
+    showLogin();
     switchTab('setup');
   }
 

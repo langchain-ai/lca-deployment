@@ -24,14 +24,14 @@ API_KEY = os.environ.get("LANGSMITH_API_KEY", "")
 
 # Each student's data is stored under their own namespace.
 # The namespace is first_last — the same value the UI sets as store_namespace.
-FIRST_NAME = "Jane"
+FIRST_NAME = "John"
 LAST_NAME = "Doe"
 NAMESPACE = (f"{FIRST_NAME.lower()}_{LAST_NAME.lower()}",)
 
 PROFILE = {
     "first_name": FIRST_NAME,
     "last_name": LAST_NAME,
-    "email": "jane@example.com",
+    "email": "john@example.com",
     "goals": "Understand how LangGraph deployments work end to end.",
 }
 

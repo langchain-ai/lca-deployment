@@ -73,10 +73,10 @@ async def create_student_sessions(
     last_name: str = "",
     email: str = "",
     goals: str = "",
+    namespace: str = "",
 ) -> list[dict]:
     """Create one assistant + thread per module for a student."""
     student_name = f"{first_name} {last_name}".strip()
-    namespace = f"{first_name.lower()}_{last_name.lower()}".strip("_")
     sessions = []
     for module in MODULES:
         assistant = await client.assistants.create(
@@ -86,6 +86,7 @@ async def create_student_sessions(
                 "module_id": module["id"],
                 "student_name": student_name,
                 "store_namespace": namespace,
+                "goals": goals,
             },
         )
         thread = await client.threads.create()

@@ -49,19 +49,19 @@ Each student's data is stored under their own namespace — a tuple that scopes 
 
 ```python
 # python/m_store/l2/store.py
-NAMESPACE = ("jane_doe",)
+NAMESPACE = ("john_doe",)
 
 await client.store.put_item(NAMESPACE, key="profile", value={
-    "first_name": "Jane",
+    "first_name": "John",
     "last_name": "Doe",
-    "email": "jane@example.com",
+    "email": "john@example.com",
     "goals": "Understand how LangGraph deployments work end to end.",
 })
 print(f"Wrote profile to Store under namespace {NAMESPACE!r}")
 ```
 
 ```text
-Wrote profile to Store under namespace ('jane_doe',)
+Wrote profile to Store under namespace ('john_doe',)
 ```
 
 `put_item` is an upsert — writing the same namespace + key again overwrites the previous value.
@@ -76,9 +76,9 @@ for k, v in item["value"].items():
 ```
 
 ```text
-  first_name: Jane
+  first_name: John
   last_name: Doe
-  email: jane@example.com
+  email: john@example.com
   goals: Understand how LangGraph deployments work end to end.
 ```
 
@@ -92,7 +92,7 @@ for entry in result["items"]:
 ```
 
 ```text
-  key=profile  value={'first_name': 'Jane', 'last_name': 'Doe', 'email': 'jane@example.com', 'goals': 'Understand how LangGraph deployments work end to end.'}
+  key=profile  value={'first_name': 'John', 'last_name': 'Doe', 'email': 'john@example.com', 'goals': 'Understand how LangGraph deployments work end to end.'}
 ```
 
 `search_items` returns every item stored under the namespace prefix — useful for listing all data belonging to a student.
