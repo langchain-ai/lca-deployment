@@ -48,7 +48,18 @@ class ContextSchema:
 def tutor_prompt(request: ModelRequest) -> str:
     module_id = request.runtime.context.module_id
     student_name = request.runtime.context.student_name
+    store_namespace = request.runtime.context.store_namespace
     goals = request.runtime.context.goals
+
+    # Read the latest profile from the Store so data stays current across logins.
+    # store_namespace is the only thing needed from context — it's the key to the student's data.
+    if store_namespace and request.runtime.store:
+        item = request.runtime.store.get((store_namespace,), key="profile")
+        if item is not None:
+            profile = item.value
+            student_name = f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip() or student_name
+            goals = profile.get("goals", goals)
+
     goals_line = f"\n\nThe student's goals: {goals}" if goals else ""
     return (
         f"You are a tutor agent. Your student's name is {student_name}. "
