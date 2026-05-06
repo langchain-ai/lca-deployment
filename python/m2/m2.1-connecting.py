@@ -1,5 +1,5 @@
 """
-2.1 — Connecting an Assistant to a Deployment
+m2.1 — Connecting an Assistant to a Deployment
 
 This file shows the steps to connect a LangSmith assistant to a deployed
 LangGraph agent.
@@ -13,13 +13,13 @@ Steps:
   1. Connect to your deployment
   2. List available graphs (to find the graph_id)
   3. Create an assistant pointing to your graph
-  4. Update the assistant with a system prompt (context)
-  5. Run a thread using assistant_l1 (non-streaming)
-  5b. Create assistant_l2 and run it streaming — same question, different context
+  4. Update the assistant with context
+  5. Run a thread using assistant_m1 (non-streaming)
+  5b. Create assistant_m2 and run it streaming — same question, different context
   6. Delete both assistants when done
 
 Once you have created a client and set up an assistant:
-- Context (system prompt, model config) is stored server-side on the assistant.
+- Context is stored server-side on the assistant.
   You do NOT resend it on every call — the server applies it automatically
   whenever you use that assistant_id.
 - Config (e.g. thread_id) is passed per run. It is ephemeral — you pass it
@@ -72,28 +72,27 @@ async def main():
     # Use this step if you want a named assistant with custom configuration.
     # ---------------------------------------------------------------------------
 
-    assistant_l1 = await client.assistants.create(
+    assistant_m1 = await client.assistants.create(
         graph_id="tutor",
-        name="Tutor — Lesson 1",
+        name="Tutor — Module 1",
         context={},
     )
-    print(f"\nCreated assistant: {assistant_l1['assistant_id']}  name={assistant_l1['name']}")
+    print(f"\nCreated assistant: {assistant_m1['assistant_id']}  name={assistant_m1['name']}")
 
     # ---------------------------------------------------------------------------
-    # Step 4: Update the assistant with a system prompt
+    # Step 4: Update the assistant with context
     #
-    # The system prompt is passed via the `context` field.
     # NOTE: When updating, include ALL context fields — not just the ones changing.
     # ---------------------------------------------------------------------------
 
-    assistant_l1 = await client.assistants.update(
-        assistant_l1["assistant_id"],
+    assistant_m1 = await client.assistants.update(
+        assistant_m1["assistant_id"],
         context={
-            "lesson_id": "tutor_l1",
-            "student_name": "Student",
+            "module_id": "module-1",
+            "store_namespace": "",
         },
     )
-    print(f"Updated assistant: {assistant_l1['assistant_id']}")
+    print(f"Updated assistant: {assistant_m1['assistant_id']}")
 
     # ---------------------------------------------------------------------------
     # Step 5: Run a thread using the assistant
@@ -104,8 +103,8 @@ async def main():
 
     result = await client.runs.wait(
         thread["thread_id"],
-        assistant_l1["assistant_id"],
-        input={"messages": [{"role": "user", "content": "What lesson number is this?"}]},
+        assistant_m1["assistant_id"],
+        input={"messages": [{"role": "user", "content": "What module is this?"}]},
     )
     messages = result.get("messages", [])
     if messages:
@@ -118,30 +117,30 @@ async def main():
         print(content)
 
     # ---------------------------------------------------------------------------
-    # Step 5b: Create a second assistant with lesson 2 context — streaming output
+    # Step 5b: Create a second assistant with module 2 context — streaming output
     #
-    # Same graph, same question — different context means a different lesson.
+    # Same graph, same question — different context means different behavior.
     # This time we stream the response to show how streaming works.
     # ---------------------------------------------------------------------------
 
-    assistant_l2 = await client.assistants.create(
+    assistant_m2 = await client.assistants.create(
         graph_id="tutor",
-        name="Tutor — Lesson 2",
+        name="Tutor — Module 2",
         context={
-            "lesson_id": "tutor_l2",
-            "student_name": "Student",
+            "module_id": "module-2",
+            "store_namespace": "",
         },
     )
-    print(f"\nCreated assistant: {assistant_l2['assistant_id']}  name={assistant_l2['name']}")
+    print(f"\nCreated assistant: {assistant_m2['assistant_id']}  name={assistant_m2['name']}")
 
-    thread_l2 = await client.threads.create()
-    print(f"Thread: {thread_l2['thread_id']}\n")
+    thread_m2 = await client.threads.create()
+    print(f"Thread: {thread_m2['thread_id']}\n")
 
     printed: dict[str, int] = {}
     async for event in client.runs.stream(
-        thread_l2["thread_id"],
-        assistant_l2["assistant_id"],
-        input={"messages": [{"role": "user", "content": "What lesson number is this?"}]},
+        thread_m2["thread_id"],
+        assistant_m2["assistant_id"],
+        input={"messages": [{"role": "user", "content": "What module is this?"}]},
         stream_mode="messages",
     ):
         if not isinstance(event.data, list):
@@ -171,10 +170,10 @@ async def main():
     # Frees the configuration records. Does not affect compute resources.
     # ---------------------------------------------------------------------------
 
-    await client.assistants.delete(assistant_l1["assistant_id"])
-    print(f"\nDeleted assistant_l1: {assistant_l1['assistant_id']}")
-    await client.assistants.delete(assistant_l2["assistant_id"])
-    print(f"Deleted assistant_l2: {assistant_l2['assistant_id']}")
+    await client.assistants.delete(assistant_m1["assistant_id"])
+    print(f"\nDeleted assistant_m1: {assistant_m1['assistant_id']}")
+    await client.assistants.delete(assistant_m2["assistant_id"])
+    print(f"Deleted assistant_m2: {assistant_m2['assistant_id']}")
 
 
 if __name__ == "__main__":
