@@ -87,7 +87,6 @@ async def register(request: Request, req: RegisterRequest):
         first_name=req.first_name,
         last_name=req.last_name,
         email=req.email,
-        goals=req.goals,
         namespace=namespace,
     )
 

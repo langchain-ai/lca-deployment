@@ -158,3 +158,79 @@ ${stepGroups}
     if (Math.abs(dx) > 40) dx < 0 ? advance() : retreat();
   });
 }
+
+// ── Slideshow builder ─────────────────────────────────────────────────────────
+// opts: { id, slides }  where each slide is { src, tag, caption }
+
+function buildSlideshow(opts) {
+  var id     = opts.id;
+  var slides = opts.slides;
+  var wrap   = document.getElementById(id);
+  if (!wrap) return;
+  var n       = slides.length;
+  var current = 0;
+
+  wrap.innerHTML =
+    '<div class="sd-stage ss-stage" id="' + id + '-stage" tabindex="0">' +
+      '<img class="ss-img" id="' + id + '-img" src="" alt="">' +
+    '</div>' +
+    '<div class="sd-bar">' +
+      '<div class="sd-caption">' +
+        '<strong id="' + id + '-tag"></strong>' +
+        '<div id="' + id + '-cap" class="ss-cap"></div>' +
+      '</div>' +
+      '<div class="sd-controls">' +
+        '<button class="sd-btn" id="' + id + '-prev" disabled title="Previous">&#8592;</button>' +
+        '<button class="sd-btn" id="' + id + '-next" title="Next">&#8594;</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="sd-dots" id="' + id + '-dots">' +
+      slides.map(function(_, i) { return '<div class="sd-dot" data-i="' + i + '"></div>'; }).join('') +
+    '</div>' +
+    '<div class="mobile-note">Tap image to advance</div>';
+
+  var imgEl   = document.getElementById(id + '-img');
+  var tagEl   = document.getElementById(id + '-tag');
+  var capEl   = document.getElementById(id + '-cap');
+  var prevBtn = document.getElementById(id + '-prev');
+  var nextBtn = document.getElementById(id + '-next');
+  var dots    = wrap.querySelectorAll('.sd-dot');
+  var stage   = document.getElementById(id + '-stage');
+
+  function goTo(i) {
+    if (i < 0 || i >= n) return;
+    current      = i;
+    imgEl.src    = slides[i].src;
+    imgEl.alt    = slides[i].tag;
+    tagEl.textContent = slides[i].tag;
+    capEl.innerHTML = '';
+    slides[i].caption.split(/\n\s*\n/).forEach(function(para) {
+      var p = document.createElement('p');
+      p.textContent = para.trim();
+      if (p.textContent) capEl.appendChild(p);
+    });
+    prevBtn.disabled  = i === 0;
+    nextBtn.disabled  = i === n - 1;
+    dots.forEach(function(d, j) { d.classList.toggle('active', j === i); });
+  }
+
+  function advance() { goTo(current + 1); }
+  function retreat() { goTo(current - 1); }
+
+  goTo(0);
+
+  prevBtn.addEventListener('click', retreat);
+  nextBtn.addEventListener('click', advance);
+  dots.forEach(function(d, i) { d.addEventListener('click', function() { goTo(i); }); });
+  stage.addEventListener('click', advance);
+  stage.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); advance(); }
+    if (e.key === 'ArrowLeft')                   { e.preventDefault(); retreat(); }
+  });
+  var tx = 0;
+  stage.addEventListener('touchstart', function(e) { tx = e.touches[0].clientX; }, { passive: true });
+  stage.addEventListener('touchend', function(e) {
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 40) dx < 0 ? advance() : retreat();
+  });
+}

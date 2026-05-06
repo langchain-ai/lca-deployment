@@ -72,7 +72,6 @@ async def create_student_sessions(
     first_name: str = "Student",
     last_name: str = "",
     email: str = "",
-    goals: str = "",
     namespace: str = "",
 ) -> list[dict]:
     """Create one assistant + thread per module for a student."""
@@ -84,9 +83,7 @@ async def create_student_sessions(
             name=f"{student_name} — {module['id']}",
             context={
                 "module_id": module["id"],
-                "student_name": student_name,
                 "store_namespace": namespace,
-                "goals": goals,
             },
         )
         thread = await client.threads.create()

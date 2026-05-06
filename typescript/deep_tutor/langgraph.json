@@ -1,0 +1,10 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "tutor": "./agent/agent.ts:graph"
+  },
+  "http": {
+    "app": "./ui/app.ts:app"
+  },
+  "env": "../../python/deep_tutor/.env"
+}

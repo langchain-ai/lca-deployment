@@ -54,7 +54,8 @@ The login process requires `app.py` to check user information. Since `app.py` is
 
 Let's look at the `auth_local.py` that supports this. It follows the same two-handler structure from previous lessons — `@auth.authenticate` to identify the user, `@auth.on` to control access — with a few additions:
 
-```python {22-26,32-33,37-40,45-53}
+```python {23-27,33-34,38-41,46-54}
+# python/lang_chat/agent/auth_local.py
 import os
 
 import jwt
@@ -149,6 +150,7 @@ This assumes you already have a tutor deployment running. All files are in your 
 **2.** Add three variables to your `.env` file:
 
 ```
+# python/lang_chat/.env
 JWT_SECRET=<random string — used to sign and verify all tokens>
 ADMIN_NAME=admin
 ADMIN_PASSWORD=<your admin password>
@@ -218,7 +220,8 @@ This is the same OAuth pattern from Lesson 4 — `@auth.authenticate` calls the 
 
 ### `auth_supabase.py`
 
-```python {3,19-36,43-51,57-59}
+```python {4,20-37,44-52,58-60}
+# python/lang_chat/agent/auth_supabase.py
 import os
 
 import httpx
@@ -328,6 +331,7 @@ async def on_store(ctx: Auth.types.AuthContext, value: dict):
 **3.** Update your `.env`:
 
 ```
+# python/lang_chat/.env
 SUPABASE_OAUTH=true
 SUPABASE_URL=https://<project>.supabase.co
 SUPABASE_ANON_KEY=<anon key>
@@ -381,16 +385,18 @@ buildDiagram({
         dashedArrow(750, 250, 278, '5. JWT returned', 500, a),
         solidArrow(250, 750, 318, '6. request + Bearer JWT', 500, a),
         labelBox(750, 338, 240, ['7. verify JWT signature', 'using JWT_SECRET']),
+        dashedArrow(750, 250, 390, '8. response', 500, a),
       ];
     },
     steps: [
-      { tag: 'Step 1 of 7', caption: 'An administrator generates a JWT_SECRET — a random string used to sign and verify tokens. This is a one-time setup step. The secret stays on the server and is never shared with clients.' },
-      { tag: 'Step 2 of 7', caption: 'A user creates an account. Their credentials (username and hashed password) are stored on the server.' },
-      { tag: 'Step 3 of 7', caption: 'The user submits their username and password to log in.' },
-      { tag: 'Step 4 of 7', caption: 'The server verifies the password, then generates a JWT containing the user identity and role, signed with JWT_SECRET.' },
-      { tag: 'Step 5 of 7', caption: 'The signed JWT is returned to the client. The client stores it and attaches it to every future request.' },
-      { tag: 'Step 6 of 7', caption: 'On subsequent requests, the client includes the JWT as a Bearer token in the Authorization header.' },
-      { tag: 'Step 7 of 7', caption: 'The server verifies the JWT signature using JWT_SECRET. No database lookup needed — the signature proves the token was issued by this server and has not been tampered with.' },
+      { tag: 'Step 1 of 8', caption: 'An administrator generates a JWT_SECRET — a random string used to sign and verify tokens. This is a one-time setup step. The secret stays on the server and is never shared with clients.' },
+      { tag: 'Step 2 of 8', caption: 'A user creates an account. Their credentials (username and hashed password) are stored on the server.' },
+      { tag: 'Step 3 of 8', caption: 'The user submits their username and password to log in.' },
+      { tag: 'Step 4 of 8', caption: 'The server verifies the password, then generates a JWT containing the user identity and role, signed with JWT_SECRET.' },
+      { tag: 'Step 5 of 8', caption: 'The signed JWT is returned to the client. The client stores it and attaches it to every future request.' },
+      { tag: 'Step 6 of 8', caption: 'On subsequent requests, the client includes the JWT as a Bearer token in the Authorization header.' },
+      { tag: 'Step 7 of 8', caption: 'The server verifies the JWT signature using JWT_SECRET. No database lookup needed — the signature proves the token was issued by this server and has not been tampered with.' },
+      { tag: 'Step 8 of 8', caption: 'The server returns the response. The stateless cycle is complete — no session was stored, no database was consulted. The JWT carried everything the server needed.' },
     ]
 });
 

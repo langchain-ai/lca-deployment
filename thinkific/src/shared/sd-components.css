@@ -208,3 +208,9 @@ hr {
 }
 
 @media (max-width: 600px) { .mobile-note { display: block; } }
+
+/* ── Slideshow Component ── */
+.ss-stage { background: #fff; line-height: 0; }
+.ss-img   { width: 100%; height: auto; display: block; }
+.ss-cap p { margin: 0 0 8px; }
+.ss-cap p:last-child { margin-bottom: 0; }
