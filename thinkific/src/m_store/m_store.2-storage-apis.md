@@ -1,4 +1,4 @@
-# Storage APIs: Hands-On
+# Accessing Storage
 
 Let's try to use some of these memories. In this lesson, you will use the LangGraph SDK to read and write the store and then read data from the Checkpointer. You'll use the `deep_tutor` deployment you already have running.
 

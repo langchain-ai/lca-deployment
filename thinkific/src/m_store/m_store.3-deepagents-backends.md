@@ -3,6 +3,7 @@
 Now that you have used the SDK to access memory, let's take a look at how the tutor and the deepagents library use memory.
 
 The tutor uses all three of the memory types that were discussed:
+
 | Storage | What it holds | Who writes it | Who reads it |
 |---|---|---|---|
 | **Checkpointer** | Conversation state per thread | LangGraph automatically | LangGraph automatically |

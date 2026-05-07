@@ -16,33 +16,6 @@ body {
   padding: 60px 28px 120px;
 }
 
-h1 {
-  font-family: 'Inter', sans-serif;
-  font-size: clamp(1.8rem, 4vw, 2.4rem);
-  font-weight: 300;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  margin-bottom: 8px;
-  color: #030710;
-}
-
-.lesson-meta {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 12px;
-  color: #40668D;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-bottom: 36px;
-}
-
-h2 {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 1.05rem;
-  font-weight: 400;
-  margin: 48px 0 14px;
-  color: #030710;
-}
-
 p { margin-bottom: 18px; }
 
 .callout {
