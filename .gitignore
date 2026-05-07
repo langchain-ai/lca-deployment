@@ -22,6 +22,8 @@ dist/
 # Editor
 *.~
 *~
+\#*\#
+.\#*
 
 # Local transcripts
 *.txt
