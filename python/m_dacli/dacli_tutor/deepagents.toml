@@ -1,0 +1,15 @@
+[agent]
+name = "deep_tutor"
+model = "google_genai:gemini-2.5-flash"
+
+# [sandbox] is optional. Omit if not needed for skills or code execution.
+# [sandbox]
+# provider = "langsmith"   # langsmith | daytona | modal | runloop
+# scope = "thread"         # thread | assistant
+
+[auth]
+provider = "anonymous"
+
+[frontend]
+enabled = true
+app_name = "LangChain Tutor"
