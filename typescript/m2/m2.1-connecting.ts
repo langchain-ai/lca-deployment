@@ -6,20 +6,40 @@
  *   2. List available graphs (to find the graph_id)
  *   3. Create an assistant pointing to your graph
  *   4. Update the assistant with context
- *   5. Run a thread using assistantM1 (non-streaming)
- *   5b. Create assistantM2 and run it streaming — same question, different context
- *   6. Delete both assistants when done
+ *   5. Create a thread
+ *   6a. Run the assistant (non-streaming)
+ *   6b. Create assistantM2 and run it streaming — same question, different context
+ *   7. Delete both assistants when done
  *
  * Documentation:
  *   LangSmith Assistants:   https://docs.langchain.com/langsmith/assistants
  *   LangGraph SDK (JS):     https://langchain-ai.github.io/langgraphjs/reference/
  */
 
-import "dotenv/config";
+import "dotenv/config";  // expects typescript/.env — loads LANGSMITH_API_KEY
 import { Client } from "@langchain/langgraph-sdk";
 
-const DEPLOYMENT_URL = process.env.LANGGRAPH_URL ?? "http://127.0.0.1:2024";
+const urlProvided = process.argv[2] !== undefined;
+const DEPLOYMENT_URL = process.argv[2] ?? "http://localhost:2024";
 const API_KEY = process.env.LANGSMITH_API_KEY ?? "";
+
+async function checkConnection(): Promise<void> {
+  try {
+    const res = await fetch(`${DEPLOYMENT_URL}/ok`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch (e) {
+    if (urlProvided) {
+      console.error(`Cannot reach deployment at ${DEPLOYMENT_URL}\nCheck the URL and try again.\n${e}`);
+    } else {
+      console.error(`Cannot reach local dev server at ${DEPLOYMENT_URL}\nIs \`langgraph dev\` running?\n${e}`);
+    }
+    process.exit(1);
+  }
+}
+
+await checkConnection();
 
 const client = new Client({ apiUrl: DEPLOYMENT_URL, apiKey: API_KEY });
 
@@ -59,11 +79,15 @@ assistantM1 = await client.assistants.update(assistantM1.assistant_id, {
 console.log(`Updated assistant: ${assistantM1.assistant_id}`);
 
 // ---------------------------------------------------------------------------
-// Step 5: Run a thread using the assistant
+// Step 5: Create a thread
 // ---------------------------------------------------------------------------
 
 const thread = await client.threads.create();
 console.log(`\nThread: ${thread.thread_id}`);
+
+// ---------------------------------------------------------------------------
+// Step 6a: Run the assistant
+// ---------------------------------------------------------------------------
 
 const result = await client.runs.wait(thread.thread_id, assistantM1.assistant_id, {
   input: { messages: [{ role: "user", content: "What module is this?" }] },
@@ -82,7 +106,7 @@ if (messages.length > 0) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 5b: Create a second assistant with module 2 context — streaming output
+// Step 6b: Create a second assistant with module 2 context — streaming output
 // ---------------------------------------------------------------------------
 
 const assistantM2 = await client.assistants.create({
@@ -98,32 +122,28 @@ console.log(`\nCreated assistant: ${assistantM2.assistant_id}  name=${assistantM
 const threadM2 = await client.threads.create();
 console.log(`Thread: ${threadM2.thread_id}\n`);
 
-const printed: Record<string, number> = {};
 const stream = client.runs.stream(threadM2.thread_id, assistantM2.assistant_id, {
   input: { messages: [{ role: "user", content: "What module is this?" }] },
-  streamMode: "messages",
+  streamMode: "messages-tuple",
 });
 for await (const event of stream) {
-  if (!Array.isArray(event.data)) continue;
-  for (const item of event.data as Array<unknown>) {
-    const msg = Array.isArray(item) ? item[0] : item;
-    if (!msg || typeof msg !== "object") continue;
-    const m = msg as Record<string, unknown>;
-    if (m.type === "AIMessageChunk" || m.type === "AIMessage" || m.type === "ai") {
-      const msgId = (m.id as string) ?? "";
-      const content = typeof m.content === "string" ? m.content : "";
-      const already = printed[msgId] ?? 0;
-      if (content.length > already) {
-        process.stdout.write(content.slice(already));
-        printed[msgId] = content.length;
-      }
-    }
+  if (event.event !== "messages") continue;
+  const [messageChunk] = event.data as [Record<string, unknown>, unknown];
+  let content = messageChunk.content;
+  if (Array.isArray(content)) {
+    content = (content as Array<Record<string, unknown>>)
+      .filter((b) => b.type === "text")
+      .map((b) => b.text ?? "")
+      .join("");
+  }
+  if (typeof content === "string" && content) {
+    process.stdout.write(content);
   }
 }
 console.log();
 
 // ---------------------------------------------------------------------------
-// Step 6: Delete both assistants
+// Step 7: Delete both assistants
 // ---------------------------------------------------------------------------
 
 await client.assistants.delete(assistantM1.assistant_id);

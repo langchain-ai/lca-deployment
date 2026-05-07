@@ -36,35 +36,23 @@ async def stream_response(
     message: str,
 ) -> AsyncGenerator[str, None]:
     """Send a message and stream the agent's response."""
-    printed: dict[str, int] = {}
     async for event in client.runs.stream(
         thread_id,
         assistant_id,
         input={"messages": [{"role": "user", "content": message}]},
-        stream_mode="messages",
+        stream_mode="messages-tuple",
     ):
-        if not isinstance(event.data, list):
+        if event.event != "messages":
             continue
-        for item in event.data:
-            msg = item[0] if isinstance(item, (list, tuple)) else item
-            if not isinstance(msg, dict):
-                continue
-            if msg.get("type") in ("AIMessageChunk", "AIMessage", "ai"):
-                msg_id = msg.get("id", "")
-                content = msg.get("content", "")
-                if isinstance(content, list):
-                    parts = []
-                    for block in content:
-                        if isinstance(block, str):
-                            parts.append(block)
-                        elif isinstance(block, dict) and block.get("type") == "text":
-                            parts.append(block.get("text", ""))
-                    content = "".join(parts)
-                if isinstance(content, str):
-                    already = printed.get(msg_id, 0)
-                    if len(content) > already:
-                        yield content[already:]
-                        printed[msg_id] = len(content)
+        message_chunk, _metadata = event.data
+        content = message_chunk.get("content", "")
+        if isinstance(content, list):
+            content = "".join(
+                b.get("text", "") for b in content
+                if isinstance(b, dict) and b.get("type") == "text"
+            )
+        if content:
+            yield content
 
 
 async def create_student_sessions(

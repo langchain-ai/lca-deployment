@@ -46,51 +46,25 @@ export async function* streamResponse(
   assistantId: string,
   message: string,
 ): AsyncGenerator<string> {
-  /**
-   * Send a message to the agent and stream the response.
-   *
-   * Some LLMs return content as a list of typed blocks.
-   * We include plain strings and type="text" blocks; skip others
-   * (e.g. type="thinking" blocks from extended thinking models).
-   */
-  const printed: Record<string, number> = {};
-
   const eventStream = client.runs.stream(threadId, assistantId, {
     input: { messages: [{ role: "user", content: message }] },
-    streamMode: "messages",
+    streamMode: "messages-tuple",
   });
 
   for await (const event of eventStream) {
-    if (!Array.isArray(event.data)) continue;
-    for (const item of event.data as Array<unknown>) {
-      const msg = Array.isArray(item) ? item[0] : item;
-      if (!msg || typeof msg !== "object") continue;
-      const m = msg as Record<string, unknown>;
-      if (m.type !== "AIMessageChunk" && m.type !== "AIMessage" && m.type !== "ai") continue;
+    if (event.event !== "messages") continue;
+    const [messageChunk] = event.data as [Record<string, unknown>, unknown];
+    let content = messageChunk.content;
 
-      const msgId = (m.id as string) ?? "";
-      let content = m.content;
+    if (Array.isArray(content)) {
+      content = (content as Array<unknown>)
+        .filter((b): b is Record<string, unknown> => !!b && typeof b === "object" && (b as Record<string, unknown>).type === "text")
+        .map((b) => (b.text as string) ?? "")
+        .join("");
+    }
 
-      if (Array.isArray(content)) {
-        const parts: string[] = [];
-        for (const block of content as Array<unknown>) {
-          if (typeof block === "string") {
-            parts.push(block);
-          } else if (block && typeof block === "object") {
-            const b = block as Record<string, unknown>;
-            if (b.type === "text") parts.push((b.text as string) ?? "");
-          }
-        }
-        content = parts.join("");
-      }
-
-      if (typeof content === "string") {
-        const already = printed[msgId] ?? 0;
-        if (content.length > already) {
-          yield content.slice(already);
-          printed[msgId] = content.length;
-        }
-      }
+    if (typeof content === "string" && content) {
+      yield content;
     }
   }
 }
