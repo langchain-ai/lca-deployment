@@ -6,5 +6,5 @@
   "http": {
     "app": "./ui/app.ts:app"
   },
-  "env": "../../python/deep_tutor/.env"
+  "env": "../.env"
 }

@@ -6,5 +6,5 @@
   "http": {
     "app": "./ui/app.py:app"
   },
-  "env": ".env"
+  "env": "../.env"
 }
