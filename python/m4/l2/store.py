@@ -1,36 +1,37 @@
 """
-m_store L2 — Part 1: The Store
+m4 L2 — Part 1: The Store
 
 Writes a student profile to the LangGraph Store and reads it back.
 
 The Store is cross-thread, deployment-wide persistent storage. Anything written
 here is immediately visible to all threads and survives redeployment.
 
-Run with deep_tutor running locally:
+Run against a local deployment (default) or pass a cloud URL:
   uv run python store.py
+  uv run python store.py https://tutor-xyz.us.langgraph.app
 """
 
 import asyncio
 import os
-from pathlib import Path
+import sys
 
 from dotenv import load_dotenv
 from langgraph_sdk import get_client
 
-load_dotenv(Path(__file__).parent / ".env")
+load_dotenv()  # expects python/.env — loads LANGSMITH_API_KEY
 
-DEPLOYMENT_URL = "http://127.0.0.1:2024"
+DEPLOYMENT_URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:2024"
 API_KEY = os.environ.get("LANGSMITH_API_KEY", "")
 
 # Each student's data is stored under their own namespace.
-# The namespace is first_last — the same value the UI sets as store_namespace.
-FIRST_NAME = "John"
-LAST_NAME = "Doe"
-NAMESPACE = (f"{FIRST_NAME.lower()}_{LAST_NAME.lower()}",)
+# The deep_tutor UI builds the namespace from the student's email by replacing
+# `.` with `_` (e.g. jane@example.com -> "jane@example_com"). Here we use a
+# hardcoded "john_doe" namespace as a stand-in.
+NAMESPACE = ("john_doe",)
 
 PROFILE = {
-    "first_name": FIRST_NAME,
-    "last_name": LAST_NAME,
+    "first_name": "John",
+    "last_name": "Doe",
     "email": "john@example.com",
     "goals": "Understand how LangGraph deployments work end to end.",
 }

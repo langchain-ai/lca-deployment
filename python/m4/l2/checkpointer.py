@@ -1,27 +1,28 @@
 """
-m_store L2 — Part 2: The Checkpointer
+m4 L2 — Part 2: The Checkpointer
 
 Sends a message to the deep_tutor agent and reads the thread state from
 the checkpointer after the run completes.
 
-The checkpointer is LangGraph's execution log. After every node, LangGraph
+The checkpointer is LangGraph's execution log. After every superstep, LangGraph
 writes the current state (including all messages) to Postgres. From the SDK
 client, the checkpointer is read-only — LangGraph manages all writes.
 
-Run with deep_tutor running locally:
+Run against a local deployment (default) or pass a cloud URL:
   uv run python checkpointer.py
+  uv run python checkpointer.py https://tutor-xyz.us.langgraph.app
 """
 
 import asyncio
 import os
-from pathlib import Path
+import sys
 
 from dotenv import load_dotenv
 from langgraph_sdk import get_client
 
-load_dotenv(Path(__file__).parent / ".env")
+load_dotenv()  # expects python/.env — loads LANGSMITH_API_KEY
 
-DEPLOYMENT_URL = "http://127.0.0.1:2024"
+DEPLOYMENT_URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:2024"
 API_KEY = os.environ.get("LANGSMITH_API_KEY", "")
 
 
