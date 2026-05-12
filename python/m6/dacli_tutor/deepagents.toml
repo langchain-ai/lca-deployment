@@ -1,0 +1,22 @@
+[agent]
+name = "deep_tutor"
+model = "anthropic:claude-sonnet-4-6"
+
+# [sandbox] is optional. Omit if not needed for skills or code execution.
+# [sandbox]
+# provider = "langsmith"   # langsmith | daytona | modal | runloop
+# scope = "thread"         # thread | assistant
+
+[auth]
+provider = "anonymous"
+
+[frontend]
+enabled = true
+app_name = "LangChain Tutor"
+
+# Route /memories/ through the LangGraph runtime Store instead of LangSmith Hub.
+# Default is "hub", which persists in a remote LangSmith hub repo and is
+# one-shot-seeded (local skill edits don't refresh on restart). "store" uses
+# the deployment's own Postgres Store.
+[memories]
+backend = "store"

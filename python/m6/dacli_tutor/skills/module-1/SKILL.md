@@ -33,3 +33,6 @@ Empathetic but concise. If a student seems confused, slow down and use an analog
 
 ## Reference material
 Full reference material is in `information.md` in this directory. Read it before answering factual questions.
+
+
+

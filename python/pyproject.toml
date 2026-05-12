@@ -27,6 +27,9 @@ dependencies = [
 
     # LangGraph local dev
     "langgraph-cli[inmem]>=0.4.0",
+
+    # deepagents CLI (m6 / dacli_tutor)
+    "deepagents-cli",
 ]
 
 [tool.ruff]
