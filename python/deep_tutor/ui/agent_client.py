@@ -19,7 +19,10 @@ load_dotenv()
 MODULES = [
     {"id": "module-1", "label": "deployment architecture", "active": True},
     {"id": "module-2", "label": "using your deployment", "active": True},
-    {"id": "module-3", "label": "module 3", "active": False},
+    {"id": "module-3", "label": "dashboard", "active": True},
+    {"id": "module-4", "label": "storage", "active": True},
+    {"id": "module-5", "label": "auth", "active": True},
+    {"id": "module-6", "label": "deepagents cli", "active": True},
 ]
 
 
