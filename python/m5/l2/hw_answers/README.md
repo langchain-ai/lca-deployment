@@ -8,7 +8,7 @@ This is a working solution to the Lesson 2 homework. The two changes from the ba
 ## Run the server
 
 ```bash
-cd python/m_auth/l2/hw_answers
+cd python/m5/l2/hw_answers
 langgraph dev --no-browser
 ```
 
@@ -19,7 +19,7 @@ No `.env` file is needed — this lesson uses no environment variables.
 In a second terminal, run the existing lesson client:
 
 ```bash
-cd python/m_auth/l2
+cd python/m5/l2
 uv run client.py
 ```
 

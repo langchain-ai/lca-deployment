@@ -50,7 +50,7 @@ async def modules():
 # ==========================================================
 
 def email_to_namespace(email: str) -> str:
-    # TODO: full password auth handled in m_auth module — namespace only for now
+    # Note: full password auth handled in m5 — namespace only for now
     return email.replace(".", "_")
 
 
@@ -105,7 +105,7 @@ async def register(request: Request, req: RegisterRequest):
 
 class LoginRequest(BaseModel):
     email: str
-    # TODO: password field — authentication handled in m_auth module
+    # Note: password field — authentication handled in m5
 
 
 @app.post("/login")
