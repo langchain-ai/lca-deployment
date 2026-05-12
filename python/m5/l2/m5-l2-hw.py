@@ -1,5 +1,5 @@
 """
-Lesson 2 Homework — run with: uv run m_auth-l2-hw.py
+Lesson 2 Homework — run with: uv run m5-l2-hw.py
 
 Part 1: Pass name through the auth pipeline
 --------------------------------------------
