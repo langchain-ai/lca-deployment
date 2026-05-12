@@ -22,7 +22,7 @@ import "dotenv/config";
 
 export const MODULES = [
   { id: "module-1", label: "deployment architecture", active: true },
-  { id: "module-2", label: "module 2", active: false },
+  { id: "module-2", label: "using your deployment", active: true },
   { id: "module-3", label: "module 3", active: false },
 ];
 

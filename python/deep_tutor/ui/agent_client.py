@@ -18,7 +18,7 @@ load_dotenv()
 
 MODULES = [
     {"id": "module-1", "label": "deployment architecture", "active": True},
-    {"id": "module-2", "label": "module 2", "active": False},
+    {"id": "module-2", "label": "using your deployment", "active": True},
     {"id": "module-3", "label": "module 3", "active": False},
 ]
 

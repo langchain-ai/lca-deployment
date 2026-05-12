@@ -1,40 +1,18 @@
 """
-m2.1 — Connecting an Assistant to a Deployment
+m2.1 — Connecting to your deployment
 
-This file shows the steps to connect a LangSmith assistant to a deployed
-LangGraph agent.
-
-An assistant is a configuration layer on top of a deployed graph. It lets you:
-- Set a custom system prompt
-- Configure model and tool settings
-- Create multiple variants of the same graph
+Demonstrates the basic connect → thread → run flow against a deployed agent.
+Uses the default assistant (graph name "tutor") — no named assistant required.
 
 Steps:
   1. Connect to your deployment
-  2. List available graphs (to find the graph_id)
-  3. Create an assistant pointing to your graph
-  4. Update the assistant with context
-  5. Create a thread
-  6a. Run the assistant (non-streaming)
-  6b. Create assistant_m2 and run it streaming — same question, different context
-  7. Delete both assistants when done
-
-Once you have created a client and set up an assistant:
-- Context is stored server-side on the assistant.
-  You do NOT resend it on every call — the server applies it automatically
-  whenever you use that assistant_id.
-- Config (e.g. thread_id) is passed per run. It is ephemeral — you pass it
-  each time to identify the conversation thread.
-- Assistants are configuration records only — deleting one does not affect
-  compute resources or running containers.
+  2. Create a thread
+  3. Run (wait) against the default assistant
+  4. Stream the response
 
 Documentation:
-  LangSmith Assistants:      https://docs.langchain.com/langsmith/assistants
-  Create Assistant API:      https://docs.langchain.com/langsmith/agent-server-api/assistants/create-assistant
-  Patch Assistant API:       https://docs.langchain.com/langsmith/agent-server-api/assistants/patch-assistant
-  Delete Assistant API:      https://docs.langchain.com/langsmith/agent-server-api/assistants/delete-assistant
-  SDK examples:              https://docs.langchain.com/langsmith/configuration-cloud
-  LangGraph SDK (Python):    https://langchain-ai.github.io/langgraph/cloud/reference/sdk/python_sdk_ref/
+  LangGraph SDK (Python): https://langchain-ai.github.io/langgraph/cloud/reference/sdk/python_sdk_ref/
+  Run execution lifecycle: https://docs.langchain.com/langsmith/agent-server#run-execution-lifecycle
 """
 
 import asyncio
@@ -74,58 +52,23 @@ async def main():
     client = get_client(url=DEPLOYMENT_URL, api_key=API_KEY)
 
     # ---------------------------------------------------------------------------
-    # Step 2: List available assistants/graphs
-    # ---------------------------------------------------------------------------
-
-    assistants = await client.assistants.search()
-    print("Available assistants/graphs:")
-    for a in assistants:
-        print(f"  graph_id={a['graph_id']}  assistant_id={a['assistant_id']}  name={a['name']}")
-
-    # ---------------------------------------------------------------------------
-    # Step 3: Create an assistant for a graph
-    #
-    # A default assistant is created automatically for each graph when you deploy.
-    # Use this step if you want a named assistant with custom configuration.
-    # ---------------------------------------------------------------------------
-
-    assistant_m1 = await client.assistants.create(
-        graph_id="tutor",
-        name="Tutor — Module 1",
-        context={},
-    )
-    print(f"\nCreated assistant: {assistant_m1['assistant_id']}  name={assistant_m1['name']}")
-
-    # ---------------------------------------------------------------------------
-    # Step 4: Update the assistant with context
-    #
-    # NOTE: When updating, include ALL context fields — not just the ones changing.
-    # ---------------------------------------------------------------------------
-
-    assistant_m1 = await client.assistants.update(
-        assistant_m1["assistant_id"],
-        context={
-            "module_id": "module-1",
-            "store_namespace": "",
-        },
-    )
-    print(f"Updated assistant: {assistant_m1['assistant_id']}")
-
-    # ---------------------------------------------------------------------------
-    # Step 5: Create a thread
+    # Step 2: Create a thread
     # ---------------------------------------------------------------------------
 
     thread = await client.threads.create()
-    print(f"\nThread: {thread['thread_id']}")
+    print(f"Thread: {thread['thread_id']}")
 
     # ---------------------------------------------------------------------------
-    # Step 6a: Run the assistant
+    # Step 3: Run against the default assistant
+    #
+    # "tutor" is the graph name — it doubles as the assistant_id of the default
+    # assistant that the deployment created for that graph.
     # ---------------------------------------------------------------------------
 
     result = await client.runs.wait(
         thread["thread_id"],
-        assistant_m1["assistant_id"],
-        input={"messages": [{"role": "user", "content": "What module is this?"}]},
+        "tutor",
+        input={"messages": [{"role": "user", "content": "Hello! What can you help me with?"}]},
     )
     messages = result.get("messages", [])
     if messages:
@@ -138,29 +81,14 @@ async def main():
         print(content)
 
     # ---------------------------------------------------------------------------
-    # Step 6b: Create a second assistant with module 2 context — streaming output
-    #
-    # Same graph, same question — different context means different behavior.
-    # This time we stream the response to show how streaming works.
+    # Step 4: Stream the response
     # ---------------------------------------------------------------------------
 
-    assistant_m2 = await client.assistants.create(
-        graph_id="tutor",
-        name="Tutor — Module 2",
-        context={
-            "module_id": "module-2",
-            "store_namespace": "",
-        },
-    )
-    print(f"\nCreated assistant: {assistant_m2['assistant_id']}  name={assistant_m2['name']}")
-
-    thread_m2 = await client.threads.create()
-    print(f"Thread: {thread_m2['thread_id']}\n")
-
+    print()
     async for event in client.runs.stream(
-        thread_m2["thread_id"],
-        assistant_m2["assistant_id"],
-        input={"messages": [{"role": "user", "content": "What module is this?"}]},
+        thread["thread_id"],
+        "tutor",
+        input={"messages": [{"role": "user", "content": "Tell me about LangGraph deployments."}]},
         stream_mode="messages-tuple",
     ):
         if event.event != "messages":
@@ -175,17 +103,6 @@ async def main():
         if content:
             print(content, end="", flush=True)
     print()
-
-    # ---------------------------------------------------------------------------
-    # Step 7: Delete both assistants
-    #
-    # Frees the configuration records. Does not affect compute resources.
-    # ---------------------------------------------------------------------------
-
-    await client.assistants.delete(assistant_m1["assistant_id"])
-    print(f"\nDeleted assistant_m1: {assistant_m1['assistant_id']}")
-    await client.assistants.delete(assistant_m2["assistant_id"])
-    print(f"Deleted assistant_m2: {assistant_m2['assistant_id']}")
 
 
 if __name__ == "__main__":

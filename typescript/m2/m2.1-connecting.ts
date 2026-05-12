@@ -1,19 +1,18 @@
 /**
- * m2.1 — Connecting an Assistant to a Deployment
+ * m2.1 — Connecting to your deployment
+ *
+ * Demonstrates the basic connect → thread → run flow against a deployed agent.
+ * Uses the default assistant (graph name "tutor") — no named assistant required.
  *
  * Steps:
  *   1. Connect to your deployment
- *   2. List available graphs (to find the graph_id)
- *   3. Create an assistant pointing to your graph
- *   4. Update the assistant with context
- *   5. Create a thread
- *   6a. Run the assistant (non-streaming)
- *   6b. Create assistantM2 and run it streaming — same question, different context
- *   7. Delete both assistants when done
+ *   2. Create a thread
+ *   3. Run (wait) against the default assistant
+ *   4. Stream the response
  *
  * Documentation:
- *   LangSmith Assistants:   https://docs.langchain.com/langsmith/assistants
- *   LangGraph SDK (JS):     https://langchain-ai.github.io/langgraphjs/reference/
+ *   LangGraph SDK (JS):      https://langchain-ai.github.io/langgraphjs/reference/
+ *   Run execution lifecycle: https://docs.langchain.com/langsmith/agent-server#run-execution-lifecycle
  */
 
 import "dotenv/config";  // expects typescript/.env — loads LANGSMITH_API_KEY
@@ -41,56 +40,28 @@ async function checkConnection(): Promise<void> {
 
 await checkConnection();
 
+// ---------------------------------------------------------------------------
+// Step 1: Connect to your deployment
+// ---------------------------------------------------------------------------
+
 const client = new Client({ apiUrl: DEPLOYMENT_URL, apiKey: API_KEY });
 
 // ---------------------------------------------------------------------------
-// Step 2: List available assistants/graphs
-// ---------------------------------------------------------------------------
-
-const assistants = await client.assistants.search();
-console.log("Available assistants/graphs:");
-for (const a of assistants) {
-  console.log(`  graph_id=${a.graph_id}  assistant_id=${a.assistant_id}  name=${a.name}`);
-}
-
-// ---------------------------------------------------------------------------
-// Step 3: Create an assistant
-// ---------------------------------------------------------------------------
-
-let assistantM1 = await client.assistants.create({
-  graphId: "tutor",
-  name: "Tutor — Module 1",
-  context: {},
-});
-console.log(`\nCreated assistant: ${assistantM1.assistant_id}  name=${assistantM1.name}`);
-
-// ---------------------------------------------------------------------------
-// Step 4: Update the assistant with context
-//
-// NOTE: When updating, include ALL context fields — not just the ones changing.
-// ---------------------------------------------------------------------------
-
-assistantM1 = await client.assistants.update(assistantM1.assistant_id, {
-  context: {
-    module_id: "module-1",
-    store_namespace: "",
-  },
-});
-console.log(`Updated assistant: ${assistantM1.assistant_id}`);
-
-// ---------------------------------------------------------------------------
-// Step 5: Create a thread
+// Step 2: Create a thread
 // ---------------------------------------------------------------------------
 
 const thread = await client.threads.create();
-console.log(`\nThread: ${thread.thread_id}`);
+console.log(`Thread: ${thread.thread_id}`);
 
 // ---------------------------------------------------------------------------
-// Step 6a: Run the assistant
+// Step 3: Run against the default assistant
+//
+// "tutor" is the graph name — it doubles as the assistant_id of the default
+// assistant that the deployment created for that graph.
 // ---------------------------------------------------------------------------
 
-const result = await client.runs.wait(thread.thread_id, assistantM1.assistant_id, {
-  input: { messages: [{ role: "user", content: "What module is this?" }] },
+const result = await client.runs.wait(thread.thread_id, "tutor", {
+  input: { messages: [{ role: "user", content: "Hello! What can you help me with?" }] },
 });
 const messages = (result as Record<string, unknown[]>).messages ?? [];
 if (messages.length > 0) {
@@ -106,24 +77,12 @@ if (messages.length > 0) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 6b: Create a second assistant with module 2 context — streaming output
+// Step 4: Stream the response
 // ---------------------------------------------------------------------------
 
-const assistantM2 = await client.assistants.create({
-  graphId: "tutor",
-  name: "Tutor — Module 2",
-  context: {
-    module_id: "module-2",
-    store_namespace: "",
-  },
-});
-console.log(`\nCreated assistant: ${assistantM2.assistant_id}  name=${assistantM2.name}`);
-
-const threadM2 = await client.threads.create();
-console.log(`Thread: ${threadM2.thread_id}\n`);
-
-const stream = client.runs.stream(threadM2.thread_id, assistantM2.assistant_id, {
-  input: { messages: [{ role: "user", content: "What module is this?" }] },
+console.log();
+const stream = client.runs.stream(thread.thread_id, "tutor", {
+  input: { messages: [{ role: "user", content: "Tell me about LangGraph deployments." }] },
   streamMode: "messages-tuple",
 });
 for await (const event of stream) {
@@ -141,12 +100,3 @@ for await (const event of stream) {
   }
 }
 console.log();
-
-// ---------------------------------------------------------------------------
-// Step 7: Delete both assistants
-// ---------------------------------------------------------------------------
-
-await client.assistants.delete(assistantM1.assistant_id);
-console.log(`\nDeleted assistantM1: ${assistantM1.assistant_id}`);
-await client.assistants.delete(assistantM2.assistant_id);
-console.log(`Deleted assistantM2: ${assistantM2.assistant_id}`);
