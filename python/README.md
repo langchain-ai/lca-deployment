@@ -1,5 +1,7 @@
 # LangChain Deployment — Python
 
+You can find the course at https://academy.langchain.com/courses/take/langsmith-deployments.
+
 ## Setup
 
 ### Prerequisites
@@ -40,23 +42,6 @@ Install dependencies:
 ```bash
 uv sync
 ```
-
-### Running Lesson Scripts
-
-```bash
-# From the python/ directory
-uv run m2/m2.1-connecting.py                                    # local
-uv run m2/m2.1-connecting.py https://your-deployment.langgraph.app  # cloud
-```
-
-### LangGraph Studio (Local Development)
-
-```bash
-cd python/deep_tutor
-uv run langgraph dev
-```
-
-This starts the agent locally at `http://localhost:2024` with hot-reloading and opens LangGraph Studio in your browser.
 
 ---
 

@@ -1,5 +1,7 @@
 # LangChain Deployment — TypeScript
 
+You can find the course at https://academy.langchain.com/courses/take/langsmith-deployments.
+
 ## Setup
 
 ### Prerequisites
@@ -40,23 +42,6 @@ Install dependencies:
 ```bash
 npm install
 ```
-
-### Running Lesson Scripts
-
-```bash
-# From the typescript/ directory
-npx tsx m2/m2.1-connecting.ts                                    # local
-npx tsx m2/m2.1-connecting.ts https://your-deployment.langgraph.app  # cloud
-```
-
-### LangGraph Studio (Local Development)
-
-```bash
-cd typescript/deep_tutor
-npx @langchain/langgraph-cli dev
-```
-
-This starts the agent locally at `http://localhost:2024` with hot-reloading and opens LangGraph Studio in your browser.
 
 ---
 
