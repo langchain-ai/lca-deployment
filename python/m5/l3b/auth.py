@@ -4,7 +4,6 @@ from langgraph_sdk import Auth
 VALID_TOKENS = {
     "alice-token": {"id": "user1", "name": "Alice"},
     "bob-token":   {"id": "user2", "name": "Bob"},
-    "admin-token": {"id": "admin", "name": "Admin"},
 }
 
 auth = Auth()
@@ -26,17 +25,17 @@ async def on_thread_create(
     value: Auth.types.on.threads.create.value,
 ):
     metadata = value.setdefault("metadata", {})
-    metadata["owner"] = ctx.user.identity  # updates value["metadata"]["owner"]
+    metadata["owner"] = ctx.user.identity  # stamp owner on the new thread
     return {"owner": ctx.user.identity}
 
 
+# Read does not write metadata — the thread already exists. We just return
+# the filter that scopes the lookup to threads owned by this user.
 @auth.on.threads.read
 async def on_thread_read(
     ctx: Auth.types.AuthContext,
     value: Auth.types.on.threads.read.value,
 ):
-    if ctx.user.identity == "admin":
-        return {}
     return {"owner": ctx.user.identity}
 
 
@@ -45,6 +44,13 @@ async def on_thread_search(
     ctx: Auth.types.AuthContext,
     value: Auth.types.on.threads.search.value,
 ):
-    if ctx.user.identity == "admin":
-        return {}
     return {"owner": ctx.user.identity}
+
+
+# Different rule for a different resource: deny all access to assistants.
+@auth.on.assistants
+async def on_assistants(ctx: Auth.types.AuthContext, value: dict):
+    raise Auth.exceptions.HTTPException(
+        status_code=403,
+        detail="Assistants cannot be modified by users.",
+    )

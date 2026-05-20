@@ -34,5 +34,11 @@ async def main():
     thread = await bob.threads.create()
     print(f"✅ Bob created thread: {thread['thread_id']}")
 
+    # --- Bob can see Alice's thread! No @auth.on means no isolation ---
+    bob_view = await bob.threads.search()
+    print(f"⚠️  Bob can see {len(bob_view)} thread(s) — including Alice's.")
+    print("   Authentication confirmed who Bob is, but didn't scope what he sees.")
+    print("   m5.3 fixes this with @auth.on.")
+
 
 asyncio.run(main())
