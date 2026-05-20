@@ -1,0 +1,37 @@
+[project]
+name = "deep-tutor-m5-l5"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+
+dependencies = [
+    # Agent framework
+    "deepagents>=0.5.3",
+    "langgraph>=1.0.0,<2.0",
+    "langchain>=1.0.0,<2.0",
+    "langchain-core>=1.3.3,<2.0",
+    "langgraph-sdk",
+    "langsmith>=0.7.31",
+    "langchain-mcp-adapters",
+
+    # Model providers
+    "langchain-google-genai",
+    "langchain-openai",
+    "langchain-anthropic",
+    "langchain-ollama",
+
+    # Utilities
+    "python-dotenv",
+    "langgraph-cli[inmem]>=0.4.0",
+    "httpx",
+
+    # UI server
+    "fastapi",
+    "pydantic",
+]
+
+[tool.setuptools.packages.find]
+include = ["agent*", "ui*"]
+
+[tool.ruff]
+lint.select = ["E", "F", "I", "UP"]
+lint.ignore = ["T201", "E501", "UP006", "UP007"]

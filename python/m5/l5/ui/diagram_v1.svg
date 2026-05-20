@@ -1,0 +1,72 @@
+<svg viewBox="0 0 680 415" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="680" height="415" fill="#030710" rx="12"/>
+  <g>
+    <rect x="5" y="5" width="390" height="404" rx="16" fill="none" stroke="#2F4B68" stroke-width="1.2" stroke-dasharray="7 3"/>
+    <text x="200" y="22" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#7FC8FF">agent server</text>
+    <text x="200" y="37" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#40668D">deployment instance</text>
+  </g>
+  <g>
+    <rect x="18" y="46" width="364" height="356" rx="14" fill="#0D1322" stroke="#7FC8FF" stroke-width="0.6"/>
+    <text x="200" y="64" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">container</text>
+    <text x="200" y="79" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#7FC8FF">always-on compute</text>
+  </g>
+  <g>
+    <rect x="32" y="88" width="336" height="306" rx="12" fill="#161F34" stroke="#40668D" stroke-width="0.6"/>
+    <text x="200" y="106" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">worker process</text>
+    <text x="200" y="121" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#99D3FF">picks up runs from queue</text>
+  </g>
+  <g>
+    <rect x="46" y="128" width="308" height="258" rx="10" fill="#030710" stroke="#006DDD" stroke-width="0.6"/>
+    <text x="200" y="146" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">langgraph runtime</text>
+    <text x="200" y="161" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#7FC8FF">graph execution engine</text>
+  </g>
+  <g>
+    <rect x="60" y="170" width="280" height="207" rx="8" fill="#0D1322" stroke="#2F4B68" stroke-width="0.6"/>
+    <text x="200" y="188" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">agent graph</text>
+    <text x="200" y="203" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#99D3FF">your business logic</text>
+  </g>
+  <g>
+    <rect x="72" y="218" width="76" height="30" rx="5" fill="#161F34" stroke="#40668D" stroke-width="0.6"/>
+    <text x="110" y="233" text-anchor="middle" dominant-baseline="central" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="400" fill="#F2FAFF">call llm</text>
+  </g>
+  <g>
+    <rect x="161" y="218" width="76" height="30" rx="5" fill="#161F34" stroke="#40668D" stroke-width="0.6"/>
+    <text x="199" y="233" text-anchor="middle" dominant-baseline="central" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="400" fill="#F2FAFF">call tool</text>
+  </g>
+  <g>
+    <rect x="250" y="218" width="82" height="30" rx="5" fill="#161F34" stroke="#40668D" stroke-width="0.6"/>
+    <text x="291" y="233" text-anchor="middle" dominant-baseline="central" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="400" fill="#F2FAFF">update state</text>
+  </g>
+  <line x1="148" y1="233" x2="161" y2="233" stroke="#40668D" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="237" y1="233" x2="250" y2="233" stroke="#40668D" stroke-width="1.2" marker-end="url(#arr)"/>
+  <text x="200" y="267" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#40668D">edge routing · reducers · state</text>
+  <text x="200" y="284" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#2F4B68">compiled once · reused per run</text>
+  <g>
+    <rect x="416" y="46" width="258" height="225" rx="14" fill="#0D1322" stroke="#7FC8FF" stroke-width="0.6"/>
+    <text x="545" y="66" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">postgres</text>
+    <text x="545" y="81" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#7FC8FF">persistence · external</text>
+  </g>
+  <g>
+    <rect x="427" y="98" width="236" height="54" rx="8" fill="#161F34" stroke="#006DDD" stroke-width="0.6"/>
+    <text x="545" y="120" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">checkpointer</text>
+    <text x="545" y="136" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#99D3FF">graph state · per node</text>
+  </g>
+  <g>
+    <rect x="427" y="163" width="236" height="54" rx="8" fill="#161F34" stroke="#40668D" stroke-width="0.6"/>
+    <text x="545" y="185" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">store</text>
+    <text x="545" y="201" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#99D3FF">long-term memory</text>
+  </g>
+  <g>
+    <rect x="416" y="293" width="258" height="68" rx="14" fill="#0D1322" stroke="#40668D" stroke-width="0.6"/>
+    <text x="545" y="321" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="500" fill="#F2FAFF">redis</text>
+    <text x="545" y="337" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" font-weight="300" fill="#7FC8FF">doorbell · streaming</text>
+  </g>
+  <line x1="354" y1="152" x2="427" y2="125" stroke="#006DDD" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="340" y1="190" x2="427" y2="190" stroke="#7FC8FF" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="368" y1="327" x2="416" y2="327" stroke="#40668D" stroke-width="1.2" marker-end="url(#arr)"/>
+</svg>
