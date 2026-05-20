@@ -682,7 +682,7 @@ otel = [
 ]
 
 [[package]]
-name = "m-auth-l2"
+name = "m5-l2"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

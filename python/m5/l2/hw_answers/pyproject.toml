@@ -1,5 +1,5 @@
 [project]
-name = "m-auth-l2-hw-answers"
+name = "m5-l2-hw-answers"
 version = "0.1.0"
 requires-python = ">=3.11,<3.14"
 

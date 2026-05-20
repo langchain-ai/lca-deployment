@@ -1,5 +1,5 @@
 [project]
-name = "m-auth-l3a"
+name = "m5-l3a"
 version = "0.1.0"
 requires-python = ">=3.11,<3.14"
 
