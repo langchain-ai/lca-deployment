@@ -50,16 +50,16 @@ const tutorPrompt = createMiddleware({
   name: "TutorPrompt",
 
   async wrapModelCall(request: any, handler: any) {
-    const configurable = (getConfig().configurable ?? {}) as Record<string, string>;
-    const moduleId = configurable.module_id ?? "module-1";
-    const storeNamespace = configurable.store_namespace ?? "";
+    const ctx = (getConfig().context ?? {}) as Record<string, string>;
+    const moduleId = ctx.module_id ?? "module-1";
+    const storeNamespace = ctx.store_namespace ?? "";
     let studentName = "Student";
     let goals = "";
 
     if (storeNamespace) {
       const store = getStore();
       if (store) {
-        const item = await store.aget([storeNamespace], "profile");
+        const item = await store.get([storeNamespace], "profile");
         if (item) {
           const profile = item.value as Record<string, string>;
           const fullName = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim();
