@@ -6,6 +6,12 @@ Writes a student profile to the LangGraph Store and reads it back.
 The Store is cross-thread, deployment-wide persistent storage. Anything written
 here is immediately visible to all threads and survives redeployment.
 
+Steps:
+  1. Connect to your deployment
+  2. Write a profile to the Store
+  3. Read it back
+  4. List all items in the namespace
+
 Run against a local deployment (default) or pass a cloud URL:
   uv run python store.py
   uv run python store.py https://tutor-xyz.us.langgraph.app
@@ -15,13 +21,18 @@ import asyncio
 import os
 import sys
 
+import httpx
 from dotenv import load_dotenv
 from langgraph_sdk import get_client
 
-load_dotenv()  # expects python/.env — loads LANGSMITH_API_KEY
+load_dotenv(override=True)  # prefer .env file
 
-DEPLOYMENT_URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:2024"
+_url_provided = len(sys.argv) > 1
+DEPLOYMENT_URL = sys.argv[1] if _url_provided else "http://localhost:2024"
 API_KEY = os.environ.get("LANGSMITH_API_KEY", "")
+
+CHECK = "✅"
+ARROW = "→"
 
 # Each student's data is stored under their own namespace.
 # The deep_tutor UI builds the namespace from the student's email by replacing
@@ -37,38 +48,57 @@ PROFILE = {
 }
 
 
+async def check_connection() -> None:
+    try:
+        async with httpx.AsyncClient() as http:
+            r = await http.get(f"{DEPLOYMENT_URL}/ok", timeout=5)
+            r.raise_for_status()
+    except Exception as e:
+        if _url_provided:
+            sys.exit(f"Cannot reach deployment at {DEPLOYMENT_URL}\nCheck the URL and try again.\n{e}")
+        else:
+            sys.exit(f"Cannot reach local dev server at {DEPLOYMENT_URL}\nIs `langgraph dev` running?\n{e}")
+
+
 async def main() -> None:
-    client = get_client(url=DEPLOYMENT_URL, api_key=API_KEY)
+    await check_connection()
 
     # ---------------------------------------------------------------------------
-    # Write the profile to the Store
+    # Step 1: Connect to your deployment
+    # ---------------------------------------------------------------------------
+
+    client = get_client(url=DEPLOYMENT_URL, api_key=API_KEY)
+    print(f"{CHECK} Connected: {DEPLOYMENT_URL}")
+
+    # ---------------------------------------------------------------------------
+    # Step 2: Write the profile to the Store
     #
     # put_item is an upsert — writing the same namespace + key again overwrites.
     # The write is immediately visible to all threads in the deployment.
     # ---------------------------------------------------------------------------
 
     await client.store.put_item(NAMESPACE, key="profile", value=PROFILE)
-    print(f"Wrote profile to Store under namespace {NAMESPACE!r}\n")
+    print(f"{CHECK} Wrote profile to Store under namespace {NAMESPACE!r}")
 
     # ---------------------------------------------------------------------------
-    # Read it back
+    # Step 3: Read it back
     #
     # get_item fetches a single item by namespace + key.
     # ---------------------------------------------------------------------------
 
     item = await client.store.get_item(NAMESPACE, key="profile")
-    print("Read back:")
+    print(f"\n{ARROW} Read back:")
     for k, v in item["value"].items():
         print(f"  {k}: {v}")
 
     # ---------------------------------------------------------------------------
-    # Search all items in the namespace
+    # Step 4: Search all items in the namespace
     #
     # search_items returns everything stored under a namespace prefix.
     # Useful for listing all data for a student.
     # ---------------------------------------------------------------------------
 
-    print(f"\nAll items in namespace {NAMESPACE!r}:")
+    print(f"\n{ARROW} All items in namespace {NAMESPACE!r}:")
     result = await client.store.search_items(NAMESPACE)
     for entry in result["items"]:
         print(f"  key={entry['key']}  value={entry['value']}")
