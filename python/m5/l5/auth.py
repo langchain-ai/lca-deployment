@@ -30,10 +30,10 @@ async def get_current_user(authorization: str | None) -> Auth.types.MinimalUserD
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{SUPABASE_URL}/auth/v1/user",
+                f"{SUPABASE_URL}/auth/v1/user",  # Supabase authentication endpoint
                 headers={
-                    "Authorization": authorization,
-                    "apiKey": SUPABASE_SERVICE_KEY,
+                    "Authorization": authorization,      # verifies the user
+                    "apiKey": SUPABASE_SERVICE_KEY,      # authenticates this handler to Supabase
                 },
             )
             response.raise_for_status()
