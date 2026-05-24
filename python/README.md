@@ -8,6 +8,7 @@ You can find the course at https://academy.langchain.com/courses/take/langsmith-
 
 - Python 3.11–3.13
 - [uv](https://docs.astral.sh/uv/) package manager — see [Installing uv](#installing-uv)
+- Docker (optional, recommended) — `langgraph deploy` uses Docker to build the container locally. Without it the CLI falls back to a remote build in LangSmith's cloud, which works fine but is slower. [Install Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
 ### Installation
 
@@ -36,6 +37,8 @@ ANTHROPIC_API_KEY=your-anthropic-api-key
 # OPENAI_API_KEY=your-openai-api-key
 # GOOGLE_API_KEY=your-google-api-key
 ```
+
+Course scripts call `load_dotenv(override=True)`, so values in `.env` take precedence over any conflicting environment variables already set in your shell.
 
 Install dependencies:
 

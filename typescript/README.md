@@ -8,6 +8,7 @@ You can find the course at https://academy.langchain.com/courses/take/langsmith-
 
 - Node.js 18+ — see [Installing Node.js](#installing-nodejs)
 - npm
+- Docker (optional, recommended) — `langgraph deploy` uses Docker to build the container locally. Without it the CLI falls back to a remote build in LangSmith's cloud, which works fine but is slower. [Install Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
 ### Installation
 
