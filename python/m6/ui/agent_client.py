@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from langgraph_sdk import get_client
 from langgraph_sdk.client import LangGraphClient
 
-load_dotenv()
+load_dotenv(override=True)  # prefer .env file
 
 
 def create_client(deployment_url: str) -> LangGraphClient:
@@ -38,6 +38,8 @@ async def stream_response(
         if event.event != "messages":
             continue
         message_chunk, _metadata = event.data
+        if message_chunk.get("type") != "AIMessageChunk":
+            continue  # skip tool calls / tool results — show only the agent's reply
         content = message_chunk.get("content", "")
         if isinstance(content, list):
             content = "".join(

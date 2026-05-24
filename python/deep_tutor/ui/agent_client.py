@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from langgraph_sdk import get_client
 from langgraph_sdk.client import LangGraphClient
 
-load_dotenv()
+load_dotenv(override=True)  # prefer .env file
 
 MODULES = [
     {"id": "module-1", "label": "deployment architecture", "active": True},
@@ -28,7 +28,7 @@ MODULES = [
 
 def create_client(deployment_url: str) -> LangGraphClient:
     """Create a LangGraph client connected to the deployment."""
-    api_key = os.environ.get("LANGSMITH_API_KEY", "")
+    api_key = os.environ.get("DEEP_TUTOR_API_KEY", "")
     return get_client(url=deployment_url, api_key=api_key)
 
 
@@ -48,6 +48,8 @@ async def stream_response(
         if event.event != "messages":
             continue
         message_chunk, _metadata = event.data
+        if message_chunk.get("type") != "AIMessageChunk":
+            continue  # skip tool calls / tool results — show only the agent's reply
         content = message_chunk.get("content", "")
         if isinstance(content, list):
             content = "".join(

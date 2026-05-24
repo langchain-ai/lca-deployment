@@ -34,7 +34,8 @@ export const MODULES = [
 // ---------------------------------------------------------------------------
 
 export function createClient(deploymentUrl: string): Client {
-  const apiKey = process.env.LANGSMITH_API_KEY ?? "";
+  const dtKey = process.env.DEEP_TUTOR_API_KEY;
+  const apiKey = (dtKey && !dtKey.includes("${")) ? dtKey : (process.env.LANGSMITH_API_KEY ?? "");
   return new Client({ apiUrl: deploymentUrl, apiKey });
 }
 
@@ -57,6 +58,7 @@ export async function* streamResponse(
   for await (const event of eventStream) {
     if (event.event !== "messages") continue;
     const [messageChunk] = event.data as [Record<string, unknown>, unknown];
+    if (messageChunk.type !== "AIMessageChunk") continue;  // skip tool calls / tool results — show only the agent's reply
     let content = messageChunk.content;
 
     if (Array.isArray(content)) {
