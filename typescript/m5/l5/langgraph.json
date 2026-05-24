@@ -1,0 +1,13 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "tutor": "./agent/agent.ts:graph"
+  },
+  "http": {
+    "app": "./ui/app.ts:app"
+  },
+  "auth": {
+    "path": "./auth.ts:auth"
+  },
+  "env": ".env"
+}

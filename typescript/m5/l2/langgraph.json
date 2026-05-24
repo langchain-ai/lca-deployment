@@ -1,0 +1,10 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "agent": "./agent/graph.ts:graph"
+  },
+  "auth": {
+    "path": "./auth.ts:auth"
+  },
+  "env": ".env"
+}

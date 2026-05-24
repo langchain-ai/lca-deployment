@@ -1,0 +1,23 @@
+{
+  "name": "m5-l2-hw-answers",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpx @langchain/langgraph-cli dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.42",
+    "@langchain/langgraph": "^1.2.9",
+    "@langchain/langgraph-sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@langchain/langgraph-cli": "^1.0.0",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
