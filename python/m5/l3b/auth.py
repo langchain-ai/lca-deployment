@@ -26,6 +26,7 @@ async def on_thread_create(
 ):
     metadata = value.setdefault("metadata", {})
     metadata["owner"] = ctx.user.identity  # stamp owner on the new thread
+    print(f"📝 threads.create → owner={ctx.user.identity}", flush=True)
     return {"owner": ctx.user.identity}
 
 
@@ -36,6 +37,7 @@ async def on_thread_read(
     ctx: Auth.types.AuthContext,
     value: Auth.types.on.threads.read.value,
 ):
+    print(f"🔍 threads.read   → filter owner={ctx.user.identity}", flush=True)
     return {"owner": ctx.user.identity}
 
 
@@ -44,12 +46,14 @@ async def on_thread_search(
     ctx: Auth.types.AuthContext,
     value: Auth.types.on.threads.search.value,
 ):
+    print(f"🔎 threads.search → filter owner={ctx.user.identity}", flush=True)
     return {"owner": ctx.user.identity}
 
 
 # Different rule for a different resource: deny all access to assistants.
 @auth.on.assistants
 async def on_assistants(ctx: Auth.types.AuthContext, value: dict):
+    print(f"⛔ assistants     → DENY {ctx.user.identity}", flush=True)
     raise Auth.exceptions.HTTPException(
         status_code=403,
         detail="Assistants cannot be modified by users.",

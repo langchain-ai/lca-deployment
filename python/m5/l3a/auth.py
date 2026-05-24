@@ -16,7 +16,9 @@ async def get_current_user(authorization: str | None) -> Auth.types.MinimalUserD
     scheme, _, token = authorization.partition(" ")
     if scheme.lower() != "bearer" or token not in VALID_TOKENS:
         raise Auth.exceptions.HTTPException(status_code=401, detail="Invalid token")
-    return {"identity": VALID_TOKENS[token]["id"]}
+    user = VALID_TOKENS[token]
+    print(f"🔓 authenticate → identity={user['id']}", flush=True)
+    return {"identity": user["id"]}
 
 
 @auth.on
@@ -24,4 +26,5 @@ async def add_owner(ctx: Auth.types.AuthContext, value: dict):
     filters = {"owner": ctx.user.identity}
     metadata = value.setdefault("metadata", {})
     metadata.update(filters)  # written to metadata on write/create actions
+    print(f"🔐 on → resource={ctx.resource} action={ctx.action}", flush=True)
     return filters
