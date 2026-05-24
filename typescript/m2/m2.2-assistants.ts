@@ -28,6 +28,9 @@ const urlProvided = process.argv[2] !== undefined;
 const DEPLOYMENT_URL = process.argv[2] ?? "http://localhost:2024";
 const API_KEY = process.env.LANGSMITH_API_KEY ?? "";
 
+const CHECK = "✅";
+const ARROW = "→";
+
 async function checkConnection(): Promise<void> {
   try {
     const res = await fetch(`${DEPLOYMENT_URL}/ok`, {
@@ -51,6 +54,7 @@ await checkConnection();
 // ---------------------------------------------------------------------------
 
 const client = new Client({ apiUrl: DEPLOYMENT_URL, apiKey: API_KEY });
+console.log(`${CHECK} Connected: ${DEPLOYMENT_URL}`);
 
 // ---------------------------------------------------------------------------
 // Step 2: Create a named assistant for module 1
@@ -67,21 +71,23 @@ const assistantM1 = await client.assistants.create({
     store_namespace: "",
   },
 });
-console.log(`Created assistant: ${assistantM1.assistant_id}  name=${assistantM1.name}`);
+console.log(`${CHECK} Created assistantM1: ${assistantM1.assistant_id}  name=${assistantM1.name}`);
 
 // ---------------------------------------------------------------------------
 // Step 3: Create a thread
 // ---------------------------------------------------------------------------
 
 const thread = await client.threads.create();
-console.log(`Thread: ${thread.thread_id}`);
+console.log(`${CHECK} Thread created: ${thread.thread_id}`);
 
 // ---------------------------------------------------------------------------
 // Step 4: Run against the named assistant
 // ---------------------------------------------------------------------------
 
+const query = "In one sentence, what module is this?";
+console.log(`\n${ARROW} Running (wait, assistantM1): ${query}`);
 const result = await client.runs.wait(thread.thread_id, assistantM1.assistant_id, {
-  input: { messages: [{ role: "user", content: "What module is this?" }] },
+  input: { messages: [{ role: "user", content: query }] },
 });
 const messages = (result as Record<string, unknown[]>).messages ?? [];
 if (messages.length > 0) {
@@ -93,7 +99,7 @@ if (messages.length > 0) {
       .map((b) => b.text ?? "")
       .join("");
   }
-  console.log(content ?? "");
+  console.log(`${CHECK} Response: ${content ?? ""}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -110,18 +116,21 @@ const assistantM2 = await client.assistants.create({
     store_namespace: "",
   },
 });
-console.log(`\nCreated assistant: ${assistantM2.assistant_id}  name=${assistantM2.name}`);
+console.log(`\n${CHECK} Created assistantM2: ${assistantM2.assistant_id}  name=${assistantM2.name}`);
 
 const threadM2 = await client.threads.create();
-console.log(`Thread: ${threadM2.thread_id}\n`);
+console.log(`${CHECK} Thread created: ${threadM2.thread_id}`);
 
+console.log(`\n${ARROW} Running (stream, assistantM2): ${query}`);
+process.stdout.write(`${CHECK} Response: `);
 const stream = client.runs.stream(threadM2.thread_id, assistantM2.assistant_id, {
-  input: { messages: [{ role: "user", content: "What module is this?" }] },
+  input: { messages: [{ role: "user", content: query }] },
   streamMode: "messages-tuple",
 });
 for await (const event of stream) {
   if (event.event !== "messages") continue;
   const [messageChunk] = event.data as [Record<string, unknown>, unknown];
+  if (messageChunk.type !== "AIMessageChunk") continue;  // skip tool calls / tool results — show only the agent's reply
   let content = messageChunk.content;
   if (Array.isArray(content)) {
     content = (content as Array<Record<string, unknown>>)
@@ -143,6 +152,6 @@ console.log();
 // ---------------------------------------------------------------------------
 
 await client.assistants.delete(assistantM1.assistant_id);
-console.log(`\nDeleted assistantM1: ${assistantM1.assistant_id}`);
+console.log(`\n${CHECK} Deleted assistantM1: ${assistantM1.assistant_id}`);
 await client.assistants.delete(assistantM2.assistant_id);
-console.log(`Deleted assistantM2: ${assistantM2.assistant_id}`);
+console.log(`${CHECK} Deleted assistantM2: ${assistantM2.assistant_id}`);

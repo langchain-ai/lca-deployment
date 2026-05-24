@@ -22,6 +22,9 @@ const urlProvided = process.argv[2] !== undefined;
 const DEPLOYMENT_URL = process.argv[2] ?? "http://localhost:2024";
 const API_KEY = process.env.LANGSMITH_API_KEY ?? "";
 
+const CHECK = "✅";
+const ARROW = "→";
+
 async function checkConnection(): Promise<void> {
   try {
     const res = await fetch(`${DEPLOYMENT_URL}/ok`, {
@@ -45,13 +48,14 @@ await checkConnection();
 // ---------------------------------------------------------------------------
 
 const client = new Client({ apiUrl: DEPLOYMENT_URL, apiKey: API_KEY });
+console.log(`${CHECK} Connected: ${DEPLOYMENT_URL}`);
 
 // ---------------------------------------------------------------------------
 // Step 2: Create a thread
 // ---------------------------------------------------------------------------
 
 const thread = await client.threads.create();
-console.log(`Thread: ${thread.thread_id}`);
+console.log(`${CHECK} Thread created: ${thread.thread_id}`);
 
 // ---------------------------------------------------------------------------
 // Step 3: Run against the default assistant
@@ -60,8 +64,10 @@ console.log(`Thread: ${thread.thread_id}`);
 // assistant that the deployment created for that graph.
 // ---------------------------------------------------------------------------
 
+let query = "In one sentence, what is the LangGraph runtime?";
+console.log(`\n${ARROW} Running (wait): ${query}`);
 const result = await client.runs.wait(thread.thread_id, "tutor", {
-  input: { messages: [{ role: "user", content: "Hello! What can you help me with?" }] },
+  input: { messages: [{ role: "user", content: query }] },
 });
 const messages = (result as Record<string, unknown[]>).messages ?? [];
 if (messages.length > 0) {
@@ -73,21 +79,24 @@ if (messages.length > 0) {
       .map((b) => b.text ?? "")
       .join("");
   }
-  console.log(content ?? "");
+  console.log(`${CHECK} Response: ${content ?? ""}`);
 }
 
 // ---------------------------------------------------------------------------
 // Step 4: Stream the response
 // ---------------------------------------------------------------------------
 
-console.log();
+query = "In one sentence, what does the Agent Server include?";
+console.log(`\n${ARROW} Running (stream): ${query}`);
+process.stdout.write(`${CHECK} Response: `);
 const stream = client.runs.stream(thread.thread_id, "tutor", {
-  input: { messages: [{ role: "user", content: "Tell me about LangGraph deployments." }] },
+  input: { messages: [{ role: "user", content: query }] },
   streamMode: "messages-tuple",
 });
 for await (const event of stream) {
   if (event.event !== "messages") continue;
   const [messageChunk] = event.data as [Record<string, unknown>, unknown];
+  if (messageChunk.type !== "AIMessageChunk") continue;  // skip tool calls / tool results — show only the agent's reply
   let content = messageChunk.content;
   if (Array.isArray(content)) {
     content = (content as Array<Record<string, unknown>>)

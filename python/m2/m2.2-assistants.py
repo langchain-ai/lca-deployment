@@ -29,11 +29,14 @@ import httpx
 from dotenv import load_dotenv
 from langgraph_sdk import get_client
 
-load_dotenv()  # expects python/.env — loads LANGSMITH_API_KEY
+load_dotenv(override=True)  # prefer .env file
 
 _url_provided = len(sys.argv) > 1
 DEPLOYMENT_URL = sys.argv[1] if _url_provided else "http://localhost:2024"
 API_KEY = os.environ.get("LANGSMITH_API_KEY", "")
+
+CHECK = "✅"
+ARROW = "→"
 
 
 async def check_connection() -> None:
@@ -56,6 +59,7 @@ async def main():
     # ---------------------------------------------------------------------------
 
     client = get_client(url=DEPLOYMENT_URL, api_key=API_KEY)
+    print(f"{CHECK} Connected: {DEPLOYMENT_URL}")
 
     # ---------------------------------------------------------------------------
     # Step 2: Create a named assistant for module 1
@@ -72,23 +76,25 @@ async def main():
             "store_namespace": "",
         },
     )
-    print(f"Created assistant: {assistant_m1['assistant_id']}  name={assistant_m1['name']}")
+    print(f"{CHECK} Created assistant_m1: {assistant_m1['assistant_id']}  name={assistant_m1['name']}")
 
     # ---------------------------------------------------------------------------
     # Step 3: Create a thread
     # ---------------------------------------------------------------------------
 
     thread = await client.threads.create()
-    print(f"Thread: {thread['thread_id']}")
+    print(f"{CHECK} Thread created: {thread['thread_id']}")
 
     # ---------------------------------------------------------------------------
     # Step 4: Run against the named assistant
     # ---------------------------------------------------------------------------
 
+    query = "In one sentence, what module is this?"
+    print(f"\n{ARROW} Running (wait, assistant_m1): {query}")
     result = await client.runs.wait(
         thread["thread_id"],
         assistant_m1["assistant_id"],
-        input={"messages": [{"role": "user", "content": "What module is this?"}]},
+        input={"messages": [{"role": "user", "content": query}]},
     )
     messages = result.get("messages", [])
     if messages:
@@ -98,7 +104,7 @@ async def main():
                 b.get("text", "") for b in content
                 if isinstance(b, dict) and b.get("type") == "text"
             )
-        print(content)
+        print(f"{CHECK} Response: {content}")
 
     # ---------------------------------------------------------------------------
     # Step 5: Second assistant with module-2 context — streaming
@@ -114,20 +120,24 @@ async def main():
             "store_namespace": "",
         },
     )
-    print(f"\nCreated assistant: {assistant_m2['assistant_id']}  name={assistant_m2['name']}")
+    print(f"\n{CHECK} Created assistant_m2: {assistant_m2['assistant_id']}  name={assistant_m2['name']}")
 
     thread_m2 = await client.threads.create()
-    print(f"Thread: {thread_m2['thread_id']}\n")
+    print(f"{CHECK} Thread created: {thread_m2['thread_id']}")
 
+    print(f"\n{ARROW} Running (stream, assistant_m2): {query}")
+    print(f"{CHECK} Response: ", end="", flush=True)
     async for event in client.runs.stream(
         thread_m2["thread_id"],
         assistant_m2["assistant_id"],
-        input={"messages": [{"role": "user", "content": "What module is this?"}]},
+        input={"messages": [{"role": "user", "content": query}]},
         stream_mode="messages-tuple",
     ):
         if event.event != "messages":
             continue
         message_chunk, _metadata = event.data
+        if message_chunk.get("type") != "AIMessageChunk":
+            continue  # skip tool calls / tool results — show only the agent's reply
         content = message_chunk.get("content", "")
         if isinstance(content, list):
             content = "".join(
@@ -146,9 +156,9 @@ async def main():
     # ---------------------------------------------------------------------------
 
     await client.assistants.delete(assistant_m1["assistant_id"])
-    print(f"\nDeleted assistant_m1: {assistant_m1['assistant_id']}")
+    print(f"\n{CHECK} Deleted assistant_m1: {assistant_m1['assistant_id']}")
     await client.assistants.delete(assistant_m2["assistant_id"])
-    print(f"Deleted assistant_m2: {assistant_m2['assistant_id']}")
+    print(f"{CHECK} Deleted assistant_m2: {assistant_m2['assistant_id']}")
 
 
 if __name__ == "__main__":
