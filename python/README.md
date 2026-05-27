@@ -6,6 +6,9 @@ You can find the course at https://academy.langchain.com/courses/take/langsmith-
 
 ### Prerequisites
 
+- [LangSmith account](#getting-started-with-langsmith)
+  - To deploy to the cloud you will need a Plus plan or above
+  - You can deploy locally with an Enterprise plan
 - Python 3.11–3.13
 - [uv](https://docs.astral.sh/uv/) package manager — see [Installing uv](#installing-uv)
 - Docker (optional, recommended) — `langgraph deploy` uses Docker to build the container locally. Without it the CLI falls back to a remote build in LangSmith's cloud, which works fine but is slower. [Install Docker Desktop](https://www.docker.com/products/docker-desktop/).
@@ -48,7 +51,25 @@ uv sync
 
 ---
 
-### Getting Started with LangSmith
+## Setup Your Coding Agent
+
+Using a coding agent to build your agents is encouraged throughout this course. Two additions make it significantly more effective: the LangChain Docs MCP server and the LangSmith tracing plugin.
+
+### LangChain Docs MCP Server
+
+Adding the LangChain Docs MCP server gives your coding agent direct access to LangChain, LangGraph, and LangSmith documentation — including search and a loaded skill that covers core concepts. Add it once and it is available in all your projects.
+
+Full setup instructions: https://docs.langchain.com/use-these-docs#use-our-mcp-server
+
+### LangSmith Skills
+
+LangSmith skills give your coding agent on-demand capabilities for querying traces, generating datasets, and defining evaluators — directly from within your agent session.
+
+Full setup instructions: https://docs.langchain.com/langsmith/skills
+
+---
+
+## Getting Started with LangSmith
 
 - Create a [LangSmith](https://smith.langchain.com/) account
 - Create a LangSmith API key
@@ -57,6 +78,9 @@ uv sync
 <img width="600" alt="LangSmith API key - step 2" src="https://github.com/user-attachments/assets/2e916b2d-e3b0-4c59-a178-c5818604b8fe" />
 
 ### Installing uv
+
+See the [uv installation docs](https://docs.astral.sh/uv/getting-started/installation/) for full instructions. Common options:
+
 
 ```bash
 # macOS / Linux

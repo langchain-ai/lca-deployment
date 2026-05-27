@@ -1,0 +1,36 @@
+<svg viewBox="130 10 420 385" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .ln { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 400; fill: #7FC8FF; }
+      .lni { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 300; font-style: italic; fill: #B2DEFF; }
+      .ls { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 300; fill: #99D3FF; }
+      .ld { font-family: 'Inter', sans-serif; font-size: 10.5px; font-weight: 300; fill: #7FC8FF; opacity: 0.55; }
+      .lh { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 400; fill: #F2FAFF; }
+    </style>
+  </defs>
+
+  <!-- Block 1: your code -->
+  <rect x="140" y="20" width="400" height="64" rx="4" fill="#1C2A3F" stroke="#2F4B68" stroke-width="0.75"/>
+  <text x="340" y="43" text-anchor="middle" dominant-baseline="central" class="lni">your code</text>
+  <text x="340" y="64" text-anchor="middle" dominant-baseline="central" class="ls">agent.py (StateGraph.compile)</text>
+
+  <!-- Block 2: langgraph -->
+  <rect x="140" y="92" width="400" height="64" rx="4" fill="#0D1828" stroke="#2F4B68" stroke-width="0.75"/>
+  <text x="340" y="115" text-anchor="middle" dominant-baseline="central" class="ln">langgraph(PyPi, OSS)</text>
+  <text x="340" y="136" text-anchor="middle" dominant-baseline="central" class="ls">LangGraph execution engine (stategraph, pregel)</text>
+
+  <!-- Block 3: langgraph-api -->
+  <rect x="140" y="164" width="400" height="122" rx="4" fill="#1C2A3F" stroke="#2F4B68" stroke-width="0.75"/>
+  <text x="340" y="184" text-anchor="middle" dominant-baseline="central" class="ln">langgraph-api</text>
+  <text x="340" y="204" text-anchor="middle" dominant-baseline="central" class="ld">API server</text>
+  <text x="340" y="220" text-anchor="middle" dominant-baseline="central" class="ld">worker</text>
+  <text x="340" y="236" text-anchor="middle" dominant-baseline="central" class="ld">Queue adapter</text>
+  <text x="340" y="252" text-anchor="middle" dominant-baseline="central" class="ld">Checkpointer / Store adapters</text>
+  <text x="340" y="268" text-anchor="middle" dominant-baseline="central" class="ld">Auth Middleware</text>
+
+  <!-- Block 4: Infrastructure -->
+  <rect x="140" y="294" width="400" height="90" rx="4" fill="#0D1828" stroke="#2F4B68" stroke-width="0.75"/>
+  <text x="340" y="316" text-anchor="middle" dominant-baseline="central" class="lh">Infrastructure</text>
+  <text x="340" y="337" text-anchor="middle" dominant-baseline="central" class="ld">database ( threads, assistants, cron, store, checkpointer )</text>
+  <text x="340" y="354" text-anchor="middle" dominant-baseline="central" class="ld">redis (queue)</text>
+</svg>

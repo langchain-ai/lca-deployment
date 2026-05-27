@@ -163,9 +163,10 @@ ${stepGroups}
 // opts: { id, slides }  where each slide is { src, tag, caption }
 
 function buildSlideshow(opts) {
-  var id     = opts.id;
-  var slides = opts.slides;
-  var wrap   = document.getElementById(id);
+  var id           = opts.id;
+  var slides       = opts.slides;
+  var initialSlide = opts.initialSlide || 0;
+  var wrap         = document.getElementById(id);
   if (!wrap) return;
   var n       = slides.length;
   var current = 0;
@@ -217,7 +218,7 @@ function buildSlideshow(opts) {
   function advance() { goTo(current + 1); }
   function retreat() { goTo(current - 1); }
 
-  goTo(0);
+  goTo(initialSlide);
 
   prevBtn.addEventListener('click', retreat);
   nextBtn.addEventListener('click', advance);
