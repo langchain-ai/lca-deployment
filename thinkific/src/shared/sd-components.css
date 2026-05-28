@@ -179,3 +179,25 @@ hr {
 .ss-img   { width: 100%; height: auto; display: block; }
 .ss-cap p { margin: 0 0 8px; }
 .ss-cap p:last-child { margin-bottom: 0; }
+
+/* ── Details / expandable blocks ── */
+details {
+  border: 1px solid #CCE9FF;
+  border-radius: 6px;
+  background: #F2FAFF;
+  margin: 20px 0;
+}
+details > summary {
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #006DDD;
+  list-style: none;
+  border-radius: 6px;
+}
+details > summary::-webkit-details-marker { display: none; }
+details[open] > summary {
+  border-bottom: 1px solid #CCE9FF;
+  border-radius: 6px 6px 0 0;
+}
+details > *:not(summary) { padding: 0 16px; }
