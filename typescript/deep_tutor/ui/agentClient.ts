@@ -58,7 +58,7 @@ export async function* streamResponse(
   for await (const event of eventStream) {
     if (event.event !== "messages") continue;
     const [messageChunk] = event.data as [Record<string, unknown>, unknown];
-    if (messageChunk.type !== "AIMessageChunk") continue;  // skip tool calls / tool results — show only the agent's reply
+    if (messageChunk.type !== "ai") continue;  // skip tool calls / tool results — show only the agent's reply
     let content = messageChunk.content;
 
     if (Array.isArray(content)) {
