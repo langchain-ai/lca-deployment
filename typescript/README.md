@@ -1,4 +1,4 @@
-# LangChain Deployment — TypeScript
+# LangSmith Deployment — TypeScript
 
 You can find the course at https://academy.langchain.com/courses/take/langsmith-deployments.
 
@@ -9,8 +9,8 @@ You can find the course at https://academy.langchain.com/courses/take/langsmith-
 - [LangSmith account](#getting-started-with-langsmith)
   - To deploy to the cloud you will need a Plus plan or above
   - You can deploy locally with an Enterprise plan
-- Node.js 18+ — see [Installing Node.js](#installing-nodejs)
-- npm
+- Node.js 20+ — see [Installing Node.js](#installing-nodejs)
+- pnpm — see [Installing pnpm](https://pnpm.io/installation)
 - Docker (optional, recommended) — `langgraph deploy` uses Docker to build the container locally. Without it the CLI falls back to a remote build in LangSmith's cloud, which works fine but is slower. [Install Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
 ### Installation
@@ -44,7 +44,7 @@ ANTHROPIC_API_KEY=your-anthropic-api-key
 Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 ---

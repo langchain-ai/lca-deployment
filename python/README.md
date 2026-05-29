@@ -1,4 +1,4 @@
-# LangChain Deployment — Python
+# LangSmith Deployment — Python
 
 You can find the course at https://academy.langchain.com/courses/take/langsmith-deployments.
 
