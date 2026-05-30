@@ -5,9 +5,11 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!;
 
 export const auth = new Auth()
   .authenticate(async (request) => {
+    // TS langgraph-api runs @auth.authenticate on ALL routes — return an anonymous
+    // user for missing tokens so the /ok health check can respond.
     const authorization = request.headers.get("Authorization");
     if (!authorization) {
-      throw new HTTPException(401, { message: "Missing token" });
+      return { identity: "", permissions: [] };
     }
     const [scheme] = authorization.split(" ");
     if (scheme?.toLowerCase() !== "bearer") {

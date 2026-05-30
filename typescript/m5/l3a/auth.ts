@@ -8,9 +8,11 @@ const VALID_TOKENS: Record<string, { id: string; name: string }> = {
 
 export const auth = new Auth()
   .authenticate(async (request) => {
+    // TS langgraph-api runs @auth.authenticate on ALL routes — return an anonymous
+    // user for missing tokens so the /ok health check can respond.
     const authorization = request.headers.get("Authorization");
     if (!authorization) {
-      throw new HTTPException(401, { message: "Missing token" });
+      return { identity: "", permissions: [] };
     }
     const [scheme, token] = authorization.split(" ");
     if (scheme?.toLowerCase() !== "bearer" || !token || !VALID_TOKENS[token]) {
