@@ -15,7 +15,8 @@
  *   Run execution lifecycle: https://docs.langchain.com/langsmith/agent-server#run-execution-lifecycle
  */
 
-import "dotenv/config";  // expects typescript/.env — loads LANGSMITH_API_KEY
+import dotenv from "dotenv";
+dotenv.config({ override: true });  // expects typescript/.env — loads LANGSMITH_API_KEY
 import { Client } from "@langchain/langgraph-sdk";
 
 const urlProvided = process.argv[2] !== undefined;

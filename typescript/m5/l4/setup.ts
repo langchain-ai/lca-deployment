@@ -2,7 +2,8 @@
  * One-time setup — creates Alice and Bob in your Supabase project.
  * Run with: pnpm setup
  */
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ override: true });
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY!;

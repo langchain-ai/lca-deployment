@@ -12,7 +12,8 @@
  */
 
 import { Client } from "@langchain/langgraph-sdk";
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ override: true });
 
 export const MODULES = [
   { id: "module-1", label: "deployment architecture", active: true },

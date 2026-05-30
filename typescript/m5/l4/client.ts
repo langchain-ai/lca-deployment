@@ -2,7 +2,8 @@
  * Test client for Lesson 4 — run with: pnpm client
  * Requires the server to be running: pnpm dev --no-browser
  */
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ override: true });
 import { Client } from "@langchain/langgraph-sdk";
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;

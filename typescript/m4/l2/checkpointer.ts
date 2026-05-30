@@ -14,7 +14,8 @@
  *   npx tsx m4/l2/checkpointer.ts https://tutor-xyz.us.langgraph.app
  */
 
-import "dotenv/config"; // expects typescript/.env — loads LANGSMITH_API_KEY
+import dotenv from "dotenv";
+dotenv.config({ override: true }); // expects typescript/.env — loads LANGSMITH_API_KEY
 import { Client } from "@langchain/langgraph-sdk";
 
 const DEPLOYMENT_URL = process.argv[2] ?? "http://localhost:2024";

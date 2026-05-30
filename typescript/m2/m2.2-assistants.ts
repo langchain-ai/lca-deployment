@@ -21,7 +21,8 @@
  *   LangGraph SDK (JS):     https://langchain-ai.github.io/langgraphjs/reference/
  */
 
-import "dotenv/config";  // expects typescript/.env — loads LANGSMITH_API_KEY
+import dotenv from "dotenv";
+dotenv.config({ override: true });  // expects typescript/.env — loads LANGSMITH_API_KEY
 import { Client } from "@langchain/langgraph-sdk";
 
 const urlProvided = process.argv[2] !== undefined;
