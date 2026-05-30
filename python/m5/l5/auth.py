@@ -11,7 +11,7 @@ from langgraph_sdk import Auth
 auth = Auth()
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
+SUPABASE_SECRET_KEY = os.environ["SUPABASE_SECRET_KEY"]
 
 
 def email_to_namespace(email: str) -> str:
@@ -28,28 +28,32 @@ async def get_current_user(authorization: str | None) -> Auth.types.MinimalUserD
     if scheme.lower() != "bearer":
         raise Auth.exceptions.HTTPException(status_code=401, detail="Invalid scheme")
     try:
+        print("➡️ @auth.authenticate: calling Supabase to validate token")
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{SUPABASE_URL}/auth/v1/user",  # Supabase authentication endpoint
                 headers={
                     "Authorization": authorization,      # verifies the user
-                    "apiKey": SUPABASE_SERVICE_KEY,      # authenticates this handler to Supabase
+                    "apiKey": SUPABASE_SECRET_KEY,      # authenticates this handler to Supabase
                 },
             )
             response.raise_for_status()
             user = response.json()
+            print(f"✅ authenticated: {user['email']}")
             return {
                 "identity": user["id"],
                 "email": user["email"],
                 "is_authenticated": True,
             }
     except Exception as e:
+        print(f"❌ authentication failed: {e}")
         raise Auth.exceptions.HTTPException(status_code=401, detail=str(e))
 
 
 @auth.on
 async def add_owner(ctx: Auth.types.AuthContext, value: dict):
     """Stamp `owner` on writes; return same filter so reads scope to this user."""
+    print(f"🔒 @auth.on: scoping to owner={ctx.user.identity[:8]}...")
     filters = {"owner": ctx.user.identity}
     metadata = value.setdefault("metadata", {})
     metadata.update(filters)  # written to metadata on write/create actions
@@ -64,4 +68,5 @@ async def on_store(ctx: Auth.types.AuthContext, value: dict):
     """
     expected = email_to_namespace(ctx.user["email"])
     namespace = value["namespace"]
+    print(f"📦 @auth.on.store: {ctx.user['email']} → namespace[0]={namespace[0]}")
     assert namespace[0] == expected, "Not authorized"

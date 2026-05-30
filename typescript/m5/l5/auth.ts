@@ -8,7 +8,7 @@
 import { Auth, HTTPException } from "@langchain/langgraph-sdk/auth";
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY!;
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY!;
 
 /** Same conversion used by the UI's emailToNamespace. */
 function emailToNamespace(email: string): string {
@@ -29,16 +29,18 @@ export const auth = new Auth()
       throw new HTTPException(401, { message: "Invalid scheme" });
     }
     try {
+      console.log("➡️ @auth.authenticate: calling Supabase to validate token");
       const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { // Supabase authentication endpoint
         headers: {
           Authorization: authorization,       // verifies the user
-          apiKey: SUPABASE_SERVICE_KEY,        // authenticates this handler to Supabase
+          apiKey: SUPABASE_SECRET_KEY,        // authenticates this handler to Supabase
         },
       });
       if (!response.ok) {
         throw new Error(`Supabase returned ${response.status}`);
       }
       const user = await response.json() as { id: string; email: string };
+      console.log(`✅ authenticated: ${user.email}`);
       return {
         identity: user.id,
         email: user.email,
@@ -46,11 +48,13 @@ export const auth = new Auth()
         permissions: [],
       };
     } catch (e) {
+      console.log(`❌ authentication failed: ${e}`);
       throw new HTTPException(401, { message: String(e) });
     }
   })
   // Stamp `owner` on writes; return same filter so reads scope to this user.
   .on(["threads", "assistants"], ({ value, user }) => {
+    console.log(`🔒 @auth.on: scoping to owner=${user.identity.slice(0, 8)}...`);
     const filters = { owner: user.identity };
     const v = value as { metadata?: Record<string, unknown> | null };
     v.metadata ??= {};
@@ -63,6 +67,7 @@ export const auth = new Auth()
     const email = (user as unknown as { email?: string }).email ?? "";
     const expected = emailToNamespace(email);
     const namespace = value.namespace;
+    console.log(`📦 @auth.on.store: ${email} → namespace[0]=${namespace?.[0]}`);
     if (!namespace || namespace[0] !== expected) {
       throw new HTTPException(403, { message: "Not authorized" });
     }
