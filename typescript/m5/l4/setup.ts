@@ -5,7 +5,7 @@
 import "dotenv/config";
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY!;
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY!;
 
 const EMAIL1 = "alice+test@example.com";
 const EMAIL2 = "bob+test@example.com";
@@ -14,7 +14,7 @@ const PASSWORD = "supersecret123";
 async function signUp(email: string, pw: string) {
   const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
-    headers: { apiKey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    headers: { apiKey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ email, password: pw }),
   });
   if (!r.ok) {

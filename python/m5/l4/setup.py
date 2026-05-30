@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)  # prefer .env file
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
+SUPABASE_PUBLISHABLE_KEY = os.environ["SUPABASE_PUBLISHABLE_KEY"]
 
 EMAIL1 = "alice+test@example.com"
 EMAIL2 = "bob+test@example.com"
@@ -23,7 +23,7 @@ async def sign_up(email: str, pw: str):
         r = await c.post(
             f"{SUPABASE_URL}/auth/v1/signup",
             json={"email": email, "password": pw},
-            headers={"apiKey": SUPABASE_ANON_KEY},
+            headers={"apiKey": SUPABASE_PUBLISHABLE_KEY},
         )
         if not r.is_success:
             raise Exception(f"{r.status_code}: {r.json()}")
