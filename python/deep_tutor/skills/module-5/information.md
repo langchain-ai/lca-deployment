@@ -120,7 +120,7 @@ async def get_current_user(authorization: str | None) -> Auth.types.MinimalUserD
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"{SUPABASE_URL}/auth/v1/user",
-            headers={"Authorization": authorization, "apiKey": SUPABASE_SERVICE_KEY},
+            headers={"Authorization": authorization, "apiKey": SUPABASE_SECRET_KEY},
         )
         response.raise_for_status()
         user = response.json()
@@ -141,8 +141,8 @@ Client App ──request + Bearer JWT──> Agent Server ──validates with�
 The Agent Server never stores credentials. It validates JWTs by calling the auth provider and applies access control. The Client App holds the JWT and attaches it on every request.
 
 Two distinct keys in this setup:
-- **Service role key** — server-side secret used by `@auth.authenticate` to call the provider's user endpoint. Never sent to the client.
-- **Publishable / anon key** — client-side, used to obtain user JWTs from the provider's login endpoint.
+- **Secret key** — server-side secret used by `@auth.authenticate` to call the provider's user endpoint. Never sent to the client.
+- **Publishable key** — client-side, used to obtain user JWTs from the provider's login endpoint.
 
 ## Two access paths to the user identity
 
