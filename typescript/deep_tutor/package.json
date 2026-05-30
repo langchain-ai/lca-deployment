@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "deepagents": "latest",
-    "@langchain/core": "^1.1.42",
+    "@langchain/core": "^1.1.48",
     "langchain": "^1.3.1",
     "@langchain/langgraph": "^1.2.9",
     "@langchain/langgraph-sdk": "^1.0.0",
