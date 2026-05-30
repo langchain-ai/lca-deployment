@@ -31,7 +31,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const indexHtml = readFileSync(join(__dirname, "index.html"), "utf-8");
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY!;
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY!;
 
 export const app = new Hono();
 
@@ -76,7 +76,7 @@ app.post("/register", async (c) => {
   // 1. Sign up with Supabase, receive a JWT.
   const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
-    headers: { apiKey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    headers: { apiKey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
   if (!r.ok) {
@@ -113,7 +113,7 @@ app.post("/login", async (c) => {
   // 1. Ask Supabase for a JWT.
   const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: "POST",
-    headers: { apiKey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    headers: { apiKey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
   if (!r.ok) {

@@ -30,7 +30,7 @@ app = FastAPI()
 UI_DIR = Path(__file__).parent
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
+SUPABASE_PUBLISHABLE_KEY = os.environ["SUPABASE_PUBLISHABLE_KEY"]
 
 
 def email_to_namespace(email: str) -> str:
@@ -83,7 +83,7 @@ async def register(request: Request, req: RegisterRequest):
         r = await c.post(
             f"{SUPABASE_URL}/auth/v1/signup",
             json={"email": req.email, "password": req.password},
-            headers={"apiKey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
+            headers={"apiKey": SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json"},
         )
         if not r.is_success:
             raise HTTPException(status_code=r.status_code, detail=r.json())
@@ -143,7 +143,7 @@ async def login(request: Request, req: LoginRequest):
         r = await c.post(
             f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
             json={"email": req.email, "password": req.password},
-            headers={"apiKey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
+            headers={"apiKey": SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json"},
         )
         if not r.is_success:
             raise HTTPException(status_code=r.status_code, detail=r.json())
