@@ -6,8 +6,8 @@ import "dotenv/config";
 import { Client } from "@langchain/langgraph-sdk";
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY!;
-const URL = "http://localhost:2024";
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY!;
+const URL = "http://127.0.0.1:2024";
 
 const EMAIL1 = "alice+test@example.com";
 const EMAIL2 = "bob+test@example.com";
@@ -15,15 +15,18 @@ const PASSWORD = "supersecret123";
 
 async function login(email: string, pw: string): Promise<string> {
   // Steps 1-2: send credentials to Supabase, receive a signed JWT
+  console.log(`➡️ logging in ${email} via Supabase...`);
   const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: "POST",
-    headers: { apiKey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    headers: { apiKey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ email, password: pw }),
   });
   if (!r.ok) {
+    console.log(`❌ login failed for ${email}: ${r.status}`);
     throw new Error(`${r.status}: ${await r.text()}`);
   }
   const data = await r.json() as { access_token: string };
+  console.log(`✅ got JWT for ${email}`);
   return data.access_token;
 }
 

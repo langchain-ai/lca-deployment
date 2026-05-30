@@ -12,8 +12,8 @@ from langgraph_sdk import get_client
 load_dotenv(override=True)  # prefer .env file
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
-URL = "http://localhost:2024"
+SUPABASE_PUBLISHABLE_KEY = os.environ["SUPABASE_PUBLISHABLE_KEY"]
+URL = "http://127.0.0.1:2024"
 
 EMAIL1 = "alice+test@example.com"
 EMAIL2 = "bob+test@example.com"
@@ -22,14 +22,17 @@ PASSWORD = "supersecret123"
 
 async def login(email: str, pw: str) -> str:
     # Steps 1-2: send credentials to Supabase, receive a signed JWT
+    print(f"➡️ logging in {email} via Supabase...")
     async with httpx.AsyncClient() as c:
         r = await c.post(
             f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
             json={"email": email, "password": pw},
-            headers={"apiKey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
+            headers={"apiKey": SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json"},
         )
         if not r.is_success:
+            print(f"❌ login failed for {email}: {r.status_code}")
             raise Exception(f"{r.status_code}: {r.json()}")
+        print(f"✅ got JWT for {email}")
         return r.json()["access_token"]
 
 
