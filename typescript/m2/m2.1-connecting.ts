@@ -97,7 +97,8 @@ const stream = client.runs.stream(thread.thread_id, "tutor", {
 for await (const event of stream) {
   if (event.event !== "messages") continue;
   const [messageChunk] = event.data as [Record<string, unknown>, unknown];
-  if (messageChunk.type !== "ai") continue;  // skip tool calls / tool results — show only the agent's reply
+  // Python deployments serialize type as "AIMessageChunk"; TS deployments use "ai"
+  if (messageChunk.type !== "ai" && messageChunk.type !== "AIMessageChunk") continue;
   let content = messageChunk.content;
   if (Array.isArray(content)) {
     content = (content as Array<Record<string, unknown>>)
