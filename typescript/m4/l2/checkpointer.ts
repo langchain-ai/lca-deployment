@@ -6,12 +6,12 @@
  *
  * The checkpointer is LangGraph's execution log. After every superstep,
  * LangGraph writes the current state (including all messages) to Postgres.
- * From the SDK client, the checkpointer is read-only — LangGraph manages
- * all writes.
+ * From the SDK client, the checkpointer is readable and writable — `threads.update_state`
+ * writes a new checkpoint directly. LangGraph also writes it automatically during runs.
  *
  * Run against a local deployment (default) or pass a cloud URL:
- *   npx tsx m4/l2/checkpointer.ts
- *   npx tsx m4/l2/checkpointer.ts https://tutor-xyz.us.langgraph.app
+ *   pnpm exec tsx m4/l2/checkpointer.ts
+ *   pnpm exec tsx m4/l2/checkpointer.ts https://tutor-xyz.us.langgraph.app
  */
 
 import dotenv from "dotenv";

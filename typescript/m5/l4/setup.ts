@@ -1,6 +1,6 @@
 /**
  * One-time setup — creates Alice and Bob in your Supabase project.
- * Run with: pnpm setup
+ * Run with: pnpm run setup
  */
 import dotenv from "dotenv";
 dotenv.config({ override: true });

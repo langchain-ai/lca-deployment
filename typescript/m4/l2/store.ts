@@ -7,8 +7,8 @@
  * written here is immediately visible to all threads and survives redeployment.
  *
  * Run against a local deployment (default) or pass a cloud URL:
- *   npx tsx m4/l2/store.ts
- *   npx tsx m4/l2/store.ts https://tutor-xyz.us.langgraph.app
+ *   pnpm exec tsx m4/l2/store.ts
+ *   pnpm exec tsx m4/l2/store.ts https://tutor-xyz.us.langgraph.app
  */
 
 import dotenv from "dotenv";
