@@ -6,7 +6,7 @@ requires-python = ">=3.11,<3.14"
 
 dependencies = [
     # Agent framework
-    "deepagents",
+    "deepagents==0.5.9",
     "langgraph>=1.0.0,<2.0",
     "langchain>=1.0.0,<2.0",
     "langchain-core>=1.3.3,<2.0",
@@ -29,7 +29,7 @@ dependencies = [
     "langgraph-cli[inmem]>=0.4.0",
 
     # deepagents CLI (m6 / dacli_tutor)
-    "deepagents-cli",
+    "deepagents-cli==0.0.57",
 ]
 
 [tool.ruff]
