@@ -1,6 +1,6 @@
 # LangChain Academy — Deployment Course
 
-Example code for the LangChain Academy deployment course. Find the course at https://academy.langchain.com/courses/take/langsmith-deployments.
+Example code for the LangChain Academy deployment course. Find the course at [LangSmith Deployments](https://academy.langchain.com/courses/take/langsmith-deployments).
 
 Students follow one of two language tracks:
 
