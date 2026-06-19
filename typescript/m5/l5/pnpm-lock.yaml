@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@langchain/anthropic':
         specifier: latest
-        version: 1.4.0(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1))
+        version: 1.4.1(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1))
       '@langchain/core':
         specifier: ^1.1.42
         version: 1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1)
@@ -36,8 +36,8 @@ importers:
         specifier: ^16.0.0
         version: 16.6.1
       hono:
-        specifier: ^4.12.23
-        version: 4.12.23
+        specifier: ^4.12.25
+        version: 4.12.25
       langchain:
         specifier: ^1.3.1
         version: 1.4.1(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1))(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1)(zod-to-json-schema@3.25.2(zod@3.25.76))
@@ -67,8 +67,8 @@ packages:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
-  '@anthropic-ai/sdk@0.95.2':
-    resolution: {integrity: sha512-Egddwo3sheo1PzUrMkZnH6VkQYwS0h/b/i8vSK8Ta9M45UQipAMeDFH57dYuDAfXMEUUGeKw6CMlremgMZgrSQ==}
+  '@anthropic-ai/sdk@0.103.0':
+    resolution: {integrity: sha512-1uG7RNgoHTUxzOXqSCODKt0UTVlxWiHk/2Tt2/uQJiPW7XzBeKVuJyd3Aw6T3LPyvZV/jDTnPLX7SaM70WLLjA==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -84,8 +84,8 @@ packages:
     resolution: {integrity: sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/runtime@7.29.2':
-    resolution: {integrity: sha512-JiDShH45zKHWyGe4ZNVRrCjBz8Nh9TMmZG1kh4QTK8hCBTWBi8Da+i7s1fJw7/lYpM4ccepSNfqzZ/QvABBi5g==}
+  '@babel/runtime@7.29.7':
+    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
   '@cfworker/json-schema@4.1.1':
@@ -464,11 +464,11 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@langchain/anthropic@1.4.0':
-    resolution: {integrity: sha512-rs1yVydrHjyiD31uChdCnKZpmDuKa0Bpz8Raiy9GvqnqmfXPMe0oOrap/2paE+NRSinDbtax8mMpP/yv8EbO1A==}
+  '@langchain/anthropic@1.4.1':
+    resolution: {integrity: sha512-h3b6hxThcfh0WdmpuWr+qBi74MN+0BpNI/4H681vwXxbD3hLr2qMYN6ghqcPQhCxGJjg8ufs85qu2/ldSWonYQ==}
     engines: {node: '>=20'}
     peerDependencies:
-      '@langchain/core': ^1.1.47
+      '@langchain/core': ^1.1.49
 
   '@langchain/core@1.1.47':
     resolution: {integrity: sha512-+fiPu6ZFnJMrZyKeM77OIVPoMPAY6OKWacnPlojHtXTbMMzb2cEOKAJV0U07cDl86NHSCIYYa0i4CyKZzXbHQQ==}
@@ -1082,8 +1082,8 @@ packages:
     resolution: {integrity: sha512-ej4AhfhfL2Q2zpMmLo7U1Uv9+PyhIZpgQLGT1F9miIGmiCJIoCgSmczFdrc97mWT4kVY72KA+WnnhJ5pghSvSg==}
     engines: {node: '>= 0.4'}
 
-  hono@4.12.23:
-    resolution: {integrity: sha512-eIaZ9qDgu7XV0pxOCrg7/WhnQ6Ivm22UcxhXx/A3dcbqbbYgBEkc6e/J/s7j2tS96zoB0S9VBdLwQNCWwUo4LA==}
+  hono@4.12.25:
+    resolution: {integrity: sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ==}
     engines: {node: '>=16.9.0'}
 
   http-errors@2.0.1:
@@ -1812,7 +1812,7 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@anthropic-ai/sdk@0.95.2(zod@3.25.76)':
+  '@anthropic-ai/sdk@0.103.0(zod@3.25.76)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.0.0
@@ -1827,7 +1827,7 @@ snapshots:
 
   '@babel/helper-validator-identifier@7.28.5': {}
 
-  '@babel/runtime@7.29.2': {}
+  '@babel/runtime@7.29.7': {}
 
   '@cfworker/json-schema@4.1.1': {}
 
@@ -2012,22 +2012,22 @@ snapshots:
 
   '@google/generative-ai@0.24.1': {}
 
-  '@hono/node-server@1.19.14(hono@4.12.23)':
+  '@hono/node-server@1.19.14(hono@4.12.25)':
     dependencies:
-      hono: 4.12.23
+      hono: 4.12.25
 
-  '@hono/node-ws@1.3.1(@hono/node-server@1.19.14(hono@4.12.23))(hono@4.12.23)':
+  '@hono/node-ws@1.3.1(@hono/node-server@1.19.14(hono@4.12.25))(hono@4.12.25)':
     dependencies:
-      '@hono/node-server': 1.19.14(hono@4.12.23)
-      hono: 4.12.23
+      '@hono/node-server': 1.19.14(hono@4.12.25)
+      hono: 4.12.25
       ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@hono/zod-validator@0.7.6(hono@4.12.23)(zod@3.25.76)':
+  '@hono/zod-validator@0.7.6(hono@4.12.25)(zod@3.25.76)':
     dependencies:
-      hono: 4.12.23
+      hono: 4.12.25
       zod: 3.25.76
 
   '@isaacs/fs-minipass@4.0.1':
@@ -2053,9 +2053,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@langchain/anthropic@1.4.0(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1))':
+  '@langchain/anthropic@1.4.1(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1))':
     dependencies:
-      '@anthropic-ai/sdk': 0.95.2(zod@3.25.76)
+      '@anthropic-ai/sdk': 0.103.0(zod@3.25.76)
       '@langchain/core': 1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1)
       zod: 3.25.76
 
@@ -2083,9 +2083,9 @@ snapshots:
   '@langchain/langgraph-api@1.2.2(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1))(@langchain/langgraph-checkpoint@1.0.2(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1)))(@langchain/langgraph-sdk@1.9.4(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1)))(@langchain/langgraph@1.3.2(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1))(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76))(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(typescript@5.9.3)(ws@8.20.1)':
     dependencies:
       '@babel/code-frame': 7.29.0
-      '@hono/node-server': 1.19.14(hono@4.12.23)
-      '@hono/node-ws': 1.3.1(@hono/node-server@1.19.14(hono@4.12.23))(hono@4.12.23)
-      '@hono/zod-validator': 0.7.6(hono@4.12.23)(zod@3.25.76)
+      '@hono/node-server': 1.19.14(hono@4.12.25)
+      '@hono/node-ws': 1.3.1(@hono/node-server@1.19.14(hono@4.12.25))(hono@4.12.25)
+      '@hono/zod-validator': 0.7.6(hono@4.12.25)(zod@3.25.76)
       '@langchain/core': 1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1)
       '@langchain/langgraph': 1.3.2(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1))(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76)
       '@langchain/langgraph-checkpoint': 1.0.2(@langchain/core@1.1.47(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1))
@@ -2096,7 +2096,7 @@ snapshots:
       dedent: 1.7.2
       dotenv: 16.6.1
       exit-hook: 4.0.0
-      hono: 4.12.23
+      hono: 4.12.25
       langsmith: 0.7.1(openai@6.38.0(ws@8.20.1)(zod@3.25.76))(ws@8.20.1)
       open: 10.2.0
       semver: 7.8.0
@@ -2241,7 +2241,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@3.25.76)':
     dependencies:
-      '@hono/node-server': 1.19.14(hono@4.12.23)
+      '@hono/node-server': 1.19.14(hono@4.12.25)
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
@@ -2251,7 +2251,7 @@ snapshots:
       eventsource-parser: 3.0.8
       express: 5.2.1
       express-rate-limit: 8.5.2(express@5.2.1)
-      hono: 4.12.23
+      hono: 4.12.25
       jose: 6.2.3
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -2843,7 +2843,7 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
-  hono@4.12.23: {}
+  hono@4.12.25: {}
 
   http-errors@2.0.1:
     dependencies:
@@ -2915,7 +2915,7 @@ snapshots:
 
   json-schema-to-ts@3.1.1:
     dependencies:
-      '@babel/runtime': 7.29.2
+      '@babel/runtime': 7.29.7
       ts-algebra: 2.0.0
 
   json-schema-traverse@1.0.0: {}
