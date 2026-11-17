@@ -20,11 +20,17 @@ dependencies = [
 
     # Utilities
     "python-dotenv",
-    "langgraph-cli[inmem]>=0.4.0",
 
     # UI server
     "fastapi",
     "pydantic",
+]
+
+[dependency-groups]
+# Local-only tooling. Not installed into the deployed image, because
+# langgraph-cli[inmem] pulls its own langgraph-api/mcp and clashes with the base image.
+dev = [
+    "langgraph-cli[inmem]>=0.4.0",
 ]
 
 [tool.setuptools.packages.find]
