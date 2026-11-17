@@ -1,5 +1,6 @@
 {
   "dependencies": ["."],
+  "api_version": "0.17.3",
   "graphs": {
     "tutor": "./agent/agent.py:graph"
   },
