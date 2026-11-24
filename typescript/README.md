@@ -28,7 +28,7 @@ Make a copy of `.env.example`:
 cp .env.example .env
 ```
 
-Insert API keys directly into `.env` — [LangSmith](#getting-started-with-langsmith) (required) and Anthropic (required):
+Choose one model authentication path. Direct provider keys remain the default: fill in [LangSmith](#getting-started-with-langsmith) for deployment access and Anthropic for the default model in `.env`:
 
 ```bash
 # LangSmith — tracing and deployment
@@ -41,7 +41,26 @@ ANTHROPIC_API_KEY=your-anthropic-api-key
 # GOOGLE_API_KEY=your-google-api-key
 ```
 
-Install dependencies:
+### Optional: LangSmith LLM Gateway
+
+If your workspace administrator has enabled [LLM Gateway](https://docs.langchain.com/langsmith/llm-gateway-direct-model-access) and configured access to your chosen provider and model, replace the model-provider key requirement for supported chat calls with:
+
+```dotenv
+LANGSMITH_GATEWAY=true
+LANGSMITH_GATEWAY_API_KEY=your-gateway-enabled-langsmith-key
+```
+
+`LANGSMITH_GATEWAY_API_KEY` overrides `LANGSMITH_API_KEY` for gateway authentication; if unset or empty, the integrations fall back to `LANGSMITH_API_KEY`. Keep native model names and provider selections unchanged. `true` (also `1` or `yes`) selects the hosted gateway; `false` (also `0` or `no`) or an unset or empty flag keeps direct access. A custom gateway root URL is also accepted; integrations append their provider paths. Remove explicit provider base URLs when using this switch, since those override gateway routing.
+
+Run `pnpm install` separately in `deep_tutor` or `m5/l5`: their locked `@langchain/anthropic` 1.6.6 and `@langchain/openai` 1.8.5 integrations support this switch. The Google alternative retains its direct `GOOGLE_API_KEY`; this setup does not claim JavaScript Google gateway support.
+
+Tracing is separate: use `LANGSMITH_TRACING=true` and a valid `LANGSMITH_API_KEY` to trace, or `LANGSMITH_TRACING=false` to turn tracing off. A dedicated gateway key does not enable tracing, and `LANGSMITH_ENDPOINT` configures LangSmith APIs, not the gateway URL.
+
+The root lesson scripts are clients of a deployment: setting gateway variables on a client does not change a remote agent. Set them in the agent server’s runtime environment (`deep_tutor/.env`, `m5/l5/.env`, or the deployment’s environment settings). `langgraph deploy` strips `LANGSMITH_API_KEY`, so explicitly supply `LANGSMITH_GATEWAY_API_KEY` as a runtime secret. Keep `LANGSMITH_API_KEY` locally for CLI and remote SDK authentication, and keep `DEEP_TUTOR_API_KEY`, Supabase, JWT, and other lesson credentials where used. The pinned Module 6 CLI has its own authentication and version requirements; use its direct-provider setup unless you separately verify gateway support for that CLI version.
+
+You may export these settings in your shell instead of writing `.env`. Remove conflicting values from `.env` first: lesson loaders that use `override=True` / `override: true` prefer the file. Never commit credentials.
+
+### Install dependencies
 
 ```bash
 pnpm install

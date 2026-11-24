@@ -9,15 +9,15 @@ dependencies = [
     "deepagents==0.5.9",
     "langgraph>=1.0.0,<2.0",
     "langchain>=1.3.12,<2.0",
-    "langchain-core>=1.3.3,<2.0",
+    "langchain-core>=1.5.3,<2.0",
     "langsmith>=0.10.2",
     "langchain-mcp-adapters",
     "langgraph-sdk",
 
     # Model providers — all installed, uncomment the one you want in agent/agent.py
-    "langchain-google-genai",   # Gemini (default — generous free tier)
-    "langchain-openai",         # OpenAI
-    "langchain-anthropic",      # Anthropic
+    "langchain-google-genai>=4.3.2,<5.0",   # Gemini (default — generous free tier)
+    "langchain-openai>=1.4.1,<2.0",         # OpenAI
+    "langchain-anthropic>=1.5.1,<2.0",      # Anthropic
     "langchain-ollama",         # Ollama (local models)
 
     # UI server
